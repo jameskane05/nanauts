@@ -34,15 +34,16 @@ const logger = new Logger("PlatformDetection", false);
  * @returns {Object} Platform detection results
  */
 export function detectPlatform() {
-  // Check for localhost/emulator bypass
-  const isEmulator =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1";
-
   // Detect Meta Quest browser via user agent
   // Quest Browser includes "OculusBrowser" or "Quest" in the user agent
   const userAgent = navigator.userAgent;
   const isQuest = /OculusBrowser|Quest/i.test(userAgent);
+
+  // Emulator = localhost OR not on real Quest hardware (IWER browser emulator)
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+  const isEmulator = isLocalhost || !isQuest;
 
   // Check for WebXR support
   const isWebXRSupported = "xr" in navigator;

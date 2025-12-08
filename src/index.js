@@ -21,18 +21,6 @@
  * ============================================================================
  */
 
-// Dedupe spammy console warnings (e.g., "No back-facing camera available")
-const warnedMessages = new Set();
-const originalWarn = console.warn;
-console.warn = (...args) => {
-  const msg = args.join(" ");
-  if (msg.includes("back-facing camera") || msg.includes("camera available")) {
-    if (warnedMessages.has("camera")) return;
-    warnedMessages.add("camera");
-  }
-  originalWarn.apply(console, args);
-};
-
 import {
   AssetType,
   Mesh,

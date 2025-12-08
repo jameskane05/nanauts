@@ -99,9 +99,10 @@ export const THRESHOLD = 0.5;
 // Video mode configuration
 export const ENABLE_VIDEO_MODE = false; // Set to true to enable SAM3 Video model tracking
 
-export const IS_EMULATOR =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1";
+// Import from centralized platform detection
+import { detectPlatform } from "../utils/PlatformDetection.js";
+const platform = detectPlatform();
+export const IS_EMULATOR = platform.isEmulator;
 export const USE_TEST_IMAGE_IN_EMULATOR = false;
 
 // Tracking parameters
