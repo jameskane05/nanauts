@@ -1,0 +1,113 @@
+<style>
+  .room-capture-panel {
+    flex-direction: column;
+    width: 320px;
+    padding: 24px;
+    align-items: center;
+    background-color: rgba(8, 24, 36, 0.95);
+    border-radius: 16px;
+    border: 2px solid rgba(255, 180, 0, 0.7);
+  }
+
+  .header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .icon {
+    font-size: 28px;
+  }
+
+  .title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffb400;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .content-area {
+    width: 280px;
+    background-color: rgba(255, 180, 0, 0.1);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 180, 0, 0.3);
+    padding: 16px;
+    margin-bottom: 16px;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .message-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .message-text-highlight {
+    font-size: 13px;
+    color: #ffb400;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .confirm-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    background-color: rgba(255, 180, 0, 0.2);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 180, 0, 0.6);
+    width: 100%;
+    justify-content: center;
+    min-height: 56px;
+  }
+
+  .button-hint {
+    width: 32px;
+    height: 32px;
+    background-color: #ffb400;
+    border-radius: 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .button-letter {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(8, 24, 36, 1);
+    text-align: center;
+  }
+
+  .confirm-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffb400;
+    letter-spacing: 1px;
+  }
+</style>
+
+<Panel class="room-capture-panel">
+  <div class="header-row">
+    <text class="title">SCENE SETUP REQUIRED</text>
+  </div>
+
+  <div class="content-area">
+    <text class="message-text">This mixed reality experience requires Meta Quest scene understanding.</text>
+    <text class="message-text-highlight">Please initiate room capture.</text>
+  </div>
+
+  <div id="confirm-btn" class="confirm-row">
+    <text id="confirm-text" class="confirm-text">PRESS TO START</text>
+    <div id="button-hint" class="button-hint">
+      <text id="button-letter" class="button-letter">A</text>
+    </div>
+  </div>
+</Panel>
+

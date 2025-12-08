@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>IWSDK Quest MR</title>
+
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="IWSDK Quest MR - Mixed Reality Robot Swarm" />
+    <meta
+      name="description"
+      content="WebXR application for Meta Quest 3 featuring lifelike robot swarm with procedural animation, voice-controlled AI object detection, and real-world surface navigation."
+    />
+    <meta
+      name="keywords"
+      content="WebXR, Meta Quest, Mixed Reality, AR, Robot Swarm, AI Object Detection, Immersive Web SDK"
+    />
+    <meta name="author" content="IWSDK-Nano" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://your-domain.com/" />
+    <meta
+      property="og:title"
+      content="IWSDK Quest MR - Mixed Reality Robot Swarm"
+    />
+    <meta
+      property="og:description"
+      content="WebXR application for Meta Quest 3 featuring lifelike robot swarm with procedural animation, voice-controlled AI object detection, and real-world surface navigation."
+    />
+    <meta
+      property="og:image"
+      content="https://your-domain.com/images/preview-og.jpg"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="IWSDK Quest MR - Mixed Reality Robot Swarm Preview"
+    />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://your-domain.com/" />
+    <meta
+      name="twitter:title"
+      content="IWSDK Quest MR - Mixed Reality Robot Swarm"
+    />
+    <meta
+      name="twitter:description"
+      content="WebXR application for Meta Quest 3 featuring lifelike robot swarm with procedural animation, voice-controlled AI object detection, and real-world surface navigation."
+    />
+    <meta
+      name="twitter:image"
+      content="https://your-domain.com/images/preview-twitter.jpg"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="IWSDK Quest MR - Mixed Reality Robot Swarm Preview"
+    />
+
+    <!-- Additional Meta Tags -->
+    <meta name="theme-color" content="#0f0f1a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="IWSDK Quest MR" />
+
+    <!-- Base styles for body -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #0f0f1a;
+        overflow: hidden;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+
+      #scene-container {
+        width: 100%;
+        height: 100vh;
+        background: #020308; /* Dark space background for starfield */
+      }
+
+      #scene-container canvas {
+        background: transparent !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene-container"></div>
+    <script type="module" src="/src/index.js"></script>
+  </body>
+</html>

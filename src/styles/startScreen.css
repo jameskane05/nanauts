@@ -1,0 +1,394 @@
+#start-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: auto;
+  animation: fadeIn 0.4s ease-out;
+  /* Transparent so starfield shows through */
+  background: transparent;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+#start-screen-overlay .start-panel {
+  background: rgba(8, 24, 36, 0.95);
+  border: 2px solid rgba(0, 200, 220, 0.6);
+  border-radius: 12px;
+  padding: 40px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  min-width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 0 40px rgba(0, 180, 200, 0.15),
+    inset 0 0 60px rgba(0, 40, 60, 0.3);
+  animation: panelSlideIn 0.5s ease-out;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#start-screen-overlay .title {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 64px;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 12px;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(0, 200, 220, 0.3);
+  animation: titleGlow 3s ease-in-out infinite;
+}
+
+@keyframes titleGlow {
+  0%,
+  100% {
+    text-shadow: 0 0 20px rgba(0, 200, 220, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 30px rgba(0, 220, 240, 0.5),
+      0 0 60px rgba(0, 180, 200, 0.2);
+  }
+}
+
+#start-screen-overlay .subtitle {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  color: #00d4e6;
+  letter-spacing: 4px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+#start-screen-overlay .decorative-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+#start-screen-overlay .meter-group {
+  display: flex;
+  gap: 3px;
+}
+
+#start-screen-overlay .meter {
+  width: 4px;
+  height: 12px;
+  background: rgba(0, 180, 200, 0.25);
+  transition: all 0.3s ease;
+}
+
+/* Left meter group - first 3 active */
+#start-screen-overlay .meter-group:not(.right) .m1,
+#start-screen-overlay .meter-group:not(.right) .m2,
+#start-screen-overlay .meter-group:not(.right) .m3 {
+  background: rgba(0, 220, 240, 0.8);
+  box-shadow: 0 0 6px rgba(0, 220, 240, 0.5);
+}
+
+/* Right meter group - last 3 active */
+#start-screen-overlay .meter-group.right .m3,
+#start-screen-overlay .meter-group.right .m4,
+#start-screen-overlay .meter-group.right .m5 {
+  background: rgba(0, 220, 240, 0.8);
+  box-shadow: 0 0 6px rgba(0, 220, 240, 0.5);
+}
+
+/* Meter pulse animation */
+#start-screen-overlay .meter-group:not(.right) .m1 {
+  animation: meterPulse 2s ease-in-out infinite 0s;
+}
+#start-screen-overlay .meter-group:not(.right) .m2 {
+  animation: meterPulse 2s ease-in-out infinite 0.1s;
+}
+#start-screen-overlay .meter-group:not(.right) .m3 {
+  animation: meterPulse 2s ease-in-out infinite 0.2s;
+}
+#start-screen-overlay .meter-group.right .m3 {
+  animation: meterPulse 2s ease-in-out infinite 0.2s;
+}
+#start-screen-overlay .meter-group.right .m4 {
+  animation: meterPulse 2s ease-in-out infinite 0.1s;
+}
+#start-screen-overlay .meter-group.right .m5 {
+  animation: meterPulse 2s ease-in-out infinite 0s;
+}
+
+@keyframes meterPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.15);
+  }
+}
+
+#start-screen-overlay .divider-line {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 180, 200, 0.6),
+    transparent
+  );
+  animation: lineGlow 2s ease-in-out infinite;
+}
+
+@keyframes lineGlow {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+#start-screen-overlay .divider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  box-shadow: 0 0 8px rgba(255, 100, 100, 0.6);
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+#start-screen-overlay .button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 3rem;
+}
+
+#start-screen-overlay .menu-button {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  padding: 15px 60px;
+  border: 2px solid rgba(0, 180, 200, 0.5);
+  border-radius: 8px;
+  background: rgba(0, 50, 70, 0.7);
+  color: #00d4e6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 250px;
+  position: relative;
+  overflow: hidden;
+}
+
+#start-screen-overlay .menu-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 220, 240, 0.1),
+    transparent
+  );
+  transition: left 0.4s ease;
+}
+
+#start-screen-overlay .menu-button:hover::before,
+#start-screen-overlay .menu-button.selected::before {
+  left: 100%;
+}
+
+#start-screen-overlay .menu-button:hover,
+#start-screen-overlay .menu-button.selected {
+  background: rgba(0, 90, 120, 0.85);
+  border-color: rgba(0, 220, 240, 0.95);
+  box-shadow: 0 0 20px rgba(0, 200, 220, 0.3),
+    inset 0 0 20px rgba(0, 100, 120, 0.2);
+  transform: scale(1.02);
+}
+
+#start-screen-overlay .menu-button:active {
+  background: rgba(0, 130, 160, 0.95);
+  transform: scale(0.98);
+}
+
+#start-screen-overlay .start-button {
+  background: rgba(0, 70, 90, 0.8);
+  border-color: rgba(0, 220, 240, 0.7);
+  color: white;
+  animation: startButtonGlow 2s ease-in-out infinite;
+}
+
+@keyframes startButtonGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(0, 200, 220, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(0, 220, 240, 0.4), 0 0 40px rgba(0, 180, 200, 0.1);
+  }
+}
+
+#start-screen-overlay .start-button:hover,
+#start-screen-overlay .start-button.selected {
+  background: rgba(0, 110, 140, 0.95);
+  border-color: rgba(0, 255, 255, 1);
+  animation: none;
+  box-shadow: 0 0 30px rgba(0, 220, 240, 0.5),
+    inset 0 0 20px rgba(0, 100, 120, 0.3);
+}
+
+#start-screen-overlay .footer {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+#start-screen-overlay .credits {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 11px;
+  color: rgba(0, 180, 200, 0.5);
+  margin: 0;
+}
+
+#start-screen-overlay .status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#start-screen-overlay .status-text {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 12px;
+  color: rgba(0, 200, 220, 0.7);
+  letter-spacing: 2px;
+}
+
+#start-screen-overlay .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00d4e6;
+  box-shadow: 0 0 8px rgba(0, 212, 230, 0.6);
+  animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Status states */
+#start-screen-overlay .status-row.status-checking .status-dot {
+  background: #f0ad4e;
+  box-shadow: 0 0 8px rgba(240, 173, 78, 0.6);
+  animation: statusBlink 0.8s ease-in-out infinite;
+}
+
+#start-screen-overlay .status-row.status-checking .status-text {
+  color: rgba(240, 173, 78, 0.9);
+}
+
+#start-screen-overlay .status-row.status-ready .status-dot {
+  background: #4ae04a;
+  box-shadow: 0 0 8px rgba(74, 224, 74, 0.6);
+}
+
+#start-screen-overlay .status-row.status-ready .status-text {
+  color: rgba(74, 224, 74, 0.9);
+}
+
+#start-screen-overlay .status-row.status-warning .status-dot {
+  background: #f0ad4e;
+  box-shadow: 0 0 8px rgba(240, 173, 78, 0.6);
+}
+
+#start-screen-overlay .status-row.status-warning .status-text {
+  color: rgba(240, 173, 78, 0.9);
+}
+
+#start-screen-overlay .status-row.status-error .status-dot {
+  background: #e05050;
+  box-shadow: 0 0 8px rgba(224, 80, 80, 0.6);
+  animation: statusBlink 1s ease-in-out infinite;
+}
+
+#start-screen-overlay .status-row.status-error .status-text {
+  color: rgba(224, 80, 80, 0.9);
+}
+
+@keyframes statusBlink {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Disabled start button */
+#start-screen-overlay .start-button.disabled,
+#start-screen-overlay .start-button:disabled {
+  background: rgba(40, 50, 60, 0.6);
+  border-color: rgba(80, 90, 100, 0.4);
+  color: rgba(120, 130, 140, 0.6);
+  cursor: not-allowed;
+  animation: none;
+  box-shadow: none;
+}
+
+#start-screen-overlay .start-button.disabled:hover,
+#start-screen-overlay .start-button:disabled:hover {
+  background: rgba(40, 50, 60, 0.6);
+  border-color: rgba(80, 90, 100, 0.4);
+  transform: none;
+  box-shadow: none;
+}

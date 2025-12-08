@@ -1,0 +1,74 @@
+/**
+ * Loading Screen Styles
+ * DOM-based loading UI displayed before XR session
+ */
+
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 1;
+  transition: opacity 0.5s ease-out;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 48px;
+}
+
+.loading-title {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: 8px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.loading-progress-container {
+  width: 300px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loading-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+.loading-progress-text {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 2px;
+}
+
+/* Pulse animation for loading title */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.loading-title {
+  animation: pulse 2s ease-in-out infinite;
+}
+

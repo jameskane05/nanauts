@@ -1,0 +1,140 @@
+/**
+ * UIStateConfig.js - DECLARATIVE UI VISIBILITY RULES
+ * =============================================================================
+ *
+ * ROLE: Centralized configuration defining when each UI panel should be visible
+ * based on game state. Uses criteria matching (like MongoDB queries) to
+ * declaratively specify visibility rules.
+ *
+ * KEY RESPONSIBILITIES:
+ * - Define UI_PANELS enum for all managed panels
+ * - Specify showWhen criteria for each panel
+ * - Set priority levels for conflict resolution
+ * - Define exclusive flag to suppress lower-priority panels
+ * - Map panel states to WRIST_UI_STATE for SpatialUIManager
+ *
+ * CRITERIA MATCHING:
+ * Uses checkCriteria() helper supporting operators: $gte, $lte, $eq, etc.
+ * Example: { currentState: { $gte: GAME_STATES.XR_ACTIVE } }
+ *
+ * PRIORITY SYSTEM:
+ * Higher priority panels take precedence. When exclusive=true, lower
+ * priority panels are hidden. Used for room capture blocking other UI.
+ *
+ * PANEL DEFINITIONS:
+ * - ROOM_CAPTURE_FAILED: Priority 200, blocks everything
+ * - ROOM_CAPTURE: Priority 100, blocks normal UI
+ * - INCOMING_CALL: Priority 50
+ * - ACTIVE_CALL: Priority 40
+ * - VOICE_INPUT: Priority 30
+ *
+ * USAGE: Imported by UIStateManager to evaluate active panel each frame
+ * =============================================================================
+ */
+
+import { GAME_STATES } from "../gameState.js";
+import { WRIST_UI_STATE } from "./SpatialUIManager.js";
+import { checkCriteria } from "../utils/CriteriaHelper.js";
+
+export const UI_PANELS = {
+  ROOM_CAPTURE_FAILED: "roomCaptureFailed",
+  ROOM_CAPTURE: "roomCapture",
+  INCOMING_CALL: "incomingCall",
+  ACTIVE_CALL: "activeCall",
+  VOICE_INPUT: "voiceInput",
+};
+
+export const UI_STATE_CONFIG = {
+  // Room capture FAILED - highest priority, blocks everything permanently
+  // Overrides ALL other states including debug spawn states
+  [UI_PANELS.ROOM_CAPTURE_FAILED]: {
+    showWhen: {
+      currentState: { $gte: GAME_STATES.XR_ACTIVE }, // Any XR state
+      roomCaptureFailed: true,
+    },
+    priority: 200, // Higher than everything else
+    exclusive: true,
+    wristUIState: WRIST_UI_STATE.HIDDEN,
+  },
+
+  // Room capture prompt - high priority, blocks other UI
+  // Overrides ALL other states including debug spawn states
+  [UI_PANELS.ROOM_CAPTURE]: {
+    showWhen: {
+      currentState: { $gte: GAME_STATES.XR_ACTIVE }, // Any XR state
+      roomSetupRequired: true,
+      roomCaptureFailed: false,
+    },
+    priority: 100,
+    exclusive: true, // Hides all lower-priority UI when shown
+    wristUIState: WRIST_UI_STATE.HIDDEN,
+  },
+
+  // Incoming call - shows after room setup, before intro
+  [UI_PANELS.INCOMING_CALL]: {
+    showWhen: {
+      currentState: GAME_STATES.XR_ACTIVE,
+      roomSetupRequired: false, // Must have room setup complete
+      introPlayed: false,
+      callAnswered: false,
+    },
+    priority: 50,
+    wristUIState: WRIST_UI_STATE.INCOMING_CALL,
+  },
+
+  // Active call - shows after answering, before robots spawn
+  [UI_PANELS.ACTIVE_CALL]: {
+    showWhen: {
+      currentState: { $gte: GAME_STATES.XR_ACTIVE },
+      roomSetupRequired: false,
+      callAnswered: true,
+      voiceInputEnabled: false,
+      robotsActive: false, // HUD hidden once robots spawn (world panel takes over)
+    },
+    priority: 50,
+    wristUIState: WRIST_UI_STATE.ACTIVE_CALL,
+  },
+
+  // Voice input - only before robots spawn (world panel handles it after)
+  [UI_PANELS.VOICE_INPUT]: {
+    showWhen: {
+      currentState: { $gte: GAME_STATES.XR_ACTIVE },
+      roomSetupRequired: false,
+      voiceInputEnabled: true,
+      robotsActive: false, // HUD hidden once robots spawn (world panel takes over)
+    },
+    priority: 50,
+    wristUIState: WRIST_UI_STATE.VOICE_INPUT,
+  },
+};
+
+/**
+ * Maps game state to which wrist UI state should be active.
+ * Evaluated in priority order - first match wins.
+ */
+export function getActiveUIPanel(gameStateSnapshot, customPanels = {}) {
+  const allConfigs = { ...UI_STATE_CONFIG, ...customPanels };
+
+  // Sort by priority (highest first)
+  const sortedPanels = Object.entries(allConfigs).sort(
+    ([, a], [, b]) => (b.priority || 0) - (a.priority || 0)
+  );
+
+  for (const [panelId, config] of sortedPanels) {
+    if (checkCriteria(gameStateSnapshot, config.showWhen)) {
+      return {
+        panelId,
+        config,
+        wristUIState: config.wristUIState || WRIST_UI_STATE.HIDDEN,
+        exclusive: config.exclusive || false,
+      };
+    }
+  }
+
+  return {
+    panelId: null,
+    config: null,
+    wristUIState: WRIST_UI_STATE.HIDDEN,
+    exclusive: false,
+  };
+}

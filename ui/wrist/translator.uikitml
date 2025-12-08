@@ -1,0 +1,246 @@
+<style>
+  .voice-panel {
+    flex-direction: column;
+    width: 280px;
+    padding: 20px;
+    align-items: center;
+    background-color: rgba(8, 24, 36, 0.95);
+    border-radius: 12px;
+    border: 2px solid rgba(0, 200, 220, 0.6);
+  }
+
+  .header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 240px;
+    margin-bottom: 12px;
+  }
+
+  .app-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #00d4e6;
+    letter-spacing: 3px;
+  }
+
+  .status-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: #4ade80;
+    text-align: right;
+  }
+
+  .status-dot-recording {
+    background-color: #ef4444;
+  }
+
+  .status-dot-processing {
+    background-color: #f59e0b;
+  }
+
+  .status-dot-success {
+    background-color: #22c55e;
+  }
+
+  .status-dot-fail {
+    background-color: #ef4444;
+  }
+
+  .status-text {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(0, 200, 220, 0.9);
+    letter-spacing: 2px;
+    text-align: right;
+  }
+
+  .content-area {
+    width: 240px;
+    height: 240px;
+    background-color: rgba(0, 40, 60, 0.6);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 180, 200, 0.3);
+    padding: 12px;
+    margin-bottom: 12px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    color: rgba(0, 200, 220, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  .transcription-section {
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  .transcription-box {
+    background-color: rgba(0, 180, 200, 0.1);
+    border: 1px solid rgba(0, 180, 200, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    flex-grow: 1;
+    min-width: 120px;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .transcription-text {
+    font-size: 13px;
+    color: rgba(0, 40, 60, 0.6);
+    line-height: 1.4;
+    font-style: italic;
+    text-align: left;
+    word-wrap: break-word;
+    width: 100%;
+  }
+
+  .result-row {
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    min-height: 36px;
+    width: 138px;
+  }
+
+  .result-success {
+    background-color: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+  }
+
+  .result-fail {
+    background-color: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+  }
+
+  .result-neutral {
+    background-color: rgba(0, 180, 200, 0.15);
+    border: 1px solid rgba(0, 180, 200, 0.3);
+  }
+
+  .result-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(0, 40, 60, 0.6);
+    text-align: center;
+  }
+
+  .prompt-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background-color: rgba(0, 70, 90, 0.7);
+    border-radius: 8px;
+    border: 2px solid rgba(0, 200, 220, 0.5);
+    width: 100%;
+    justify-content: center;
+    min-height: 56px;
+  }
+
+  .prompt-row-recording {
+    background-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.7);
+  }
+
+  .button-hint {
+    width: 32px;
+    height: 32px;
+    background-color: #00d4e6;
+    border-radius: 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .button-hint-recording {
+    background-color: #ef4444;
+  }
+
+  .button-letter {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(8, 24, 36, 1);
+    text-align: center;
+  }
+
+  .prompt-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #00d4e6;
+    letter-spacing: 1px;
+  }
+
+  .prompt-text-recording {
+    color: #fca5a5;
+  }
+
+  .you-said-section {
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  .they-heard-section {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .they-heard-label {
+    flex-shrink: 0;
+    width: 70px;
+  }
+</style>
+
+<Panel class="voice-panel">
+  <div class="header-row">
+    <text class="app-title">TRANSLATOR</text>
+    <div class="status-row">
+      <text id="status-text" class="status-text">READY</text>
+      <div id="status-dot" class="status-dot"></div>
+    </div>
+  </div>
+
+  <div id="content-area" class="content-area">
+    <div class="you-said-section">
+      <text class="section-label">You said:</text>
+      <div class="transcription-box">
+        <text id="transcription-text" class="transcription-text">...</text>
+      </div>
+    </div>
+    <div class="they-heard-section">
+      <div class="they-heard-label"><text class="section-label">They heard:</text></div>
+      <div id="result-row" class="result-row result-neutral">
+        <text id="result-text" class="result-text">...</text>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompt-row" class="prompt-row">
+
+    <text id="prompt-text" class="prompt-text">HOLD TO SPEAK</text>
+    <div id="button-hint" class="button-hint">
+      <text id="button-letter" class="button-letter">A</text>
+    </div>
+  </div>
+
+</Panel>

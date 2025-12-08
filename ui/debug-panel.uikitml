@@ -1,0 +1,103 @@
+<style>
+  .debug-panel {
+    padding: 12px;
+    flex-direction: column;
+    width: 320px;
+    height: 240px;
+    background-color: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+  }
+
+  .debug-section {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .debug-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .debug-label {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .debug-value {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: monospace;
+    margin-bottom: 4px;
+  }
+
+  .status-good {
+    color: #4ade80;
+  }
+
+  .status-warning {
+    color: #fbbf24;
+  }
+
+  .status-error {
+    color: #f87171;
+  }
+
+  .status-inactive {
+    color: rgba(255, 255, 255, 0.4);
+  }
+</style>
+
+<Panel class="debug-panel">
+  <div class="debug-section">
+    <text class="debug-label">Camera State</text>
+    <text id="camera-state" class="debug-value status-inactive">-</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">XR Visibility</text>
+    <text id="xr-visibility" class="debug-value status-inactive">-</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">Capture Timer</text>
+    <text id="capture-timer" class="debug-value">0.0s</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">Processing</text>
+    <text id="processing-state" class="debug-value status-inactive">Idle</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">API Status</text>
+    <text id="api-status" class="debug-value status-inactive">-</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">Detections</text>
+    <text id="detections-count" class="debug-value">0</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">Head Position</text>
+    <text id="head-position" class="debug-value">0.00, 0.00, 0.00</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">Camera Intrinsics</text>
+    <text id="camera-intrinsics" class="debug-value status-inactive">Approximated</text>
+  </div>
+
+  <div class="debug-section">
+    <text class="debug-label">Last Response</text>
+    <text id="last-response" class="debug-value status-inactive">-</text>
+  </div>
+</Panel>
+

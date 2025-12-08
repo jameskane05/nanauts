@@ -1,0 +1,77 @@
+<style>
+  .score-panel {
+    flex-direction: column;
+    width: 140px;
+    padding: 12px;
+    align-items: center;
+    background-color: rgba(8, 24, 36, 0.95);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 100, 100, 0.6);
+  }
+
+  .header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: #ff4444;
+    margin-right: 6px;
+  }
+
+  .app-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ff6666;
+    letter-spacing: 2px;
+    text-align: right;
+    padding-right: 5px;
+  }
+
+  .score-container {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 8px;
+    background-color: rgba(60, 20, 20, 0.6);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 80, 80, 0.3);
+  }
+
+  .score-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255, 150, 150, 0.8);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .score-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 2px;
+  }
+
+</style>
+
+<Panel class="score-panel">
+  <div class="header-row">
+    <text class="app-title">ALERT</text>
+    <div id="status-dot" class="status-dot"></div>
+  </div>
+
+  <div class="score-container">
+    <text class="score-label">CALMED</text>
+    <text id="score-text" class="score-text">0 / 5</text>
+  </div>
+
+</Panel>
+
+

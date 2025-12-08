@@ -1,0 +1,74 @@
+<style>
+  .call-panel {
+    flex-direction: column;
+    width: 132px;
+    padding: 7px;
+    align-items: center;
+    background-color: rgba(8, 24, 36, 0.95);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 200, 220, 0.6);
+  }
+
+  .header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 118px;
+    margin-bottom: 5px;
+  }
+
+  .app-title {
+    font-size: 7px;
+    font-weight: 700;
+    color: #00d4e6;
+    letter-spacing: 2px;
+    flex-grow: 1;
+  }
+
+  .status-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 2px;
+    background-color: #4ade80;
+  }
+
+  .status-text {
+    font-size: 5px;
+    font-weight: 600;
+    color: rgba(0, 212, 230, 0.9);
+    letter-spacing: 1px;
+    text-align: right;
+  }
+
+  .video-container {
+    width: 118px;
+    height: 118px;
+    background-color: rgba(0, 40, 60, 0.6);
+    border-radius: 4px;
+    border: 1px solid rgba(0, 180, 200, 0.3);
+    overflow: hidden;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
+<Panel class="call-panel">
+  <div class="header-row">
+    <text class="app-title">VIDCONF</text>
+    <div class="status-row">
+      <div><text id="status-text" class="status-text">CONNECTED</text></div>
+      <div class="status-dot"></div>
+    </div>
+  </div>
+
+  <div class="video-container">
+  </div>
+</Panel>

@@ -1,0 +1,154 @@
+<style>
+  .call-panel {
+    flex-direction: column;
+    width: 200px;
+    padding: 12px;
+    align-items: center;
+    background-color: rgba(8, 24, 36, 0.95);
+    border-radius: 10px;
+    border: 2px solid rgba(0, 200, 220, 0.6);
+  }
+
+  .header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 176px;
+    margin-bottom: 8px;
+  }
+
+  .app-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #00d4e6;
+    letter-spacing: 3px;
+    flex-grow: 1;
+  }
+
+  .status-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content:flex-end;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: #f0ad4e;
+  }
+
+  .status-text {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(240, 173, 78, 0.9);
+    letter-spacing: 2px;
+    text-align: right;
+  }
+
+  .video-container {
+    width: 176px;
+    height: 176px;
+    background-color: rgba(0, 40, 60, 0.6);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 180, 200, 0.3);
+    overflow: hidden;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+  }
+
+  .incoming-info {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 120px;
+    padding-top: 10px;
+  }
+
+  .incoming-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(0, 200, 220, 0.6);
+    text-align: center;
+    width: 100%;
+    letter-spacing: 1px;
+  }
+
+  .caller-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+    letter-spacing: 1px;
+  }
+
+  .prompt-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: rgba(0, 70, 90, 0.9);
+    border-radius: 6px;
+    border: 2px solid rgba(0, 200, 220, 0.5);
+    justify-content: center;
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  .button-hint {
+    width: 26px;
+    height: 26px;
+    background-color: #00d4e6;
+    border-radius: 13px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .button-letter {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(8, 24, 36, 1);
+    text-align: center;
+  }
+
+  .prompt-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #00d4e6;
+    letter-spacing: 1px;
+  }
+
+</style>
+
+<Panel class="call-panel">
+  <div class="header-row">
+    <text class="app-title">VIDCONF</text>
+    <div class="status-row">
+      <text id="status-text" class="status-text">RINGING</text>
+      <div id="status-dot" class="status-dot"></div>
+    </div>
+  </div>
+
+  <div id="video-container" class="video-container">
+    <div id="incoming-info" class="incoming-info">
+      <text class="incoming-label">INCOMING CALL FROM</text>
+      <text id="caller-name" class="caller-name">Prof. Sea</text>
+    </div>
+    
+    <div id="incoming-prompt" class="prompt-row">
+
+<text id="prompt-text" class="prompt-text">PRESS TO ANSWER</text>      <div id="button-hint" class="button-hint">
+        <text id="button-letter" class="button-letter">A</text>
+      </div>
+    </div>
+  </div>
+
+</Panel>
