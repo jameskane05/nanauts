@@ -4,17 +4,8 @@ const AWS_REGION = process.env.BEDROCK_REGION || "us-east-1";
 const BEDROCK_MODEL_ID = "us.meta.llama3-3-70b-instruct-v1:0";
 
 export async function handler(event) {
-  const headers = {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-
-  // Handle CORS preflight
-  if (event.requestContext?.http?.method === "OPTIONS") {
-    return { statusCode: 200, headers, body: "" };
-  }
+  // CORS headers are handled by Lambda Function URL config - don't duplicate
+  const headers = { "Content-Type": "application/json" };
 
   const path = event.rawPath || event.path;
   const body = JSON.parse(event.body || "{}");

@@ -21,6 +21,23 @@
  * ============================================================================
  */
 
+// Build timestamp for deployment verification
+console.log(`[Build] ${__BUILD_TIME__}`);
+
+// Suppress "No back-facing camera" spam from IWSDK (runs every frame in emulator)
+const _origError = console.error;
+let _cameraErrorShown = false;
+console.error = (...a) => {
+  if (typeof a[0] === "string" && a[0].includes("back-facing")) {
+    if (!_cameraErrorShown) {
+      _cameraErrorShown = true;
+      _origError.apply(console, a);
+    }
+    return;
+  }
+  _origError.apply(console, a);
+};
+
 import {
   AssetType,
   Mesh,

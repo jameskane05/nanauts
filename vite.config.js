@@ -1,4 +1,3 @@
-import { optimizeGLTF } from "@iwsdk/vite-plugin-gltf-optimizer";
 import { injectIWER } from "@iwsdk/vite-plugin-iwer";
 import { compileUIKit } from "@iwsdk/vite-plugin-uikitml";
 import { defineConfig } from "vite";
@@ -6,6 +5,9 @@ import mkcert from "vite-plugin-mkcert";
 import path from "path";
 
 export default defineConfig({
+  define: {
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   resolve: {
     alias: {
       tslib: path.resolve("node_modules/tslib/tslib.es6.mjs"),
@@ -23,9 +25,6 @@ export default defineConfig({
     }),
 
     compileUIKit({ sourceDir: "ui", outputDir: "public/ui", verbose: true }),
-    optimizeGLTF({
-      level: "medium",
-    }),
   ],
   server: { host: "0.0.0.0", port: 8081, open: true },
   build: {

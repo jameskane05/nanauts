@@ -120,15 +120,16 @@ Criteria-based audio playback using IWSDK's native audio:
 - SFX can be positional (world-space) or non-positional
 - Auto-plays/stops based on criteria matching current state
 
-### AIManager (`src/aiManager.js`)
+### AIManager (`src/ai/AIManager.js`)
 
-The main orchestrator for AI-powered object detection and 3D reconstruction:
+The main orchestrator for AI-powered speech processing and robot interaction:
 
-- **Voice Recording**: Records audio commands to identify objects
-- **Server Communication**: Sends images + audio to SAM3 segmentation server
-- **Object Tracking**: Maintains tracked objects with confidence scoring
+- **Voice Recording**: Records audio via Web Audio API
+- **Transcription**: Sends audio to OpenAI Whisper (via Lambda proxy in prod)
+- **Interpretation**: Analyzes transcription with AWS Bedrock Llama 3.3
+- **Robot Reactions**: Triggers appropriate robot responses based on intent/sentiment
+- **Object Tracking**: Maintains tracked objects with confidence scoring (SAM3)
 - **Depth Processing**: Fuses server depth maps with native WebXR hit test depth
-- **3D Model Generation**: Requests Gaussian splat reconstructions
 - **Label Management**: Creates floating 3D labels above detected objects
 
 ### HandInputSystem (`src/handInputSystem.js`)
@@ -250,10 +251,87 @@ Unified audio definitions for music and SFX:
 
 ## AI System (`src/ai/`)
 
+### Architecture Overview
+
+The AI system uses cloud-based services for speech processing and intent analysis:
+
+```
+User Speech → OpenAI Whisper → Transcription → AWS Bedrock (Llama 3.3) → Intent/Sentiment
+```
+
+**Production**: Requests route through an AWS Lambda proxy to protect API keys.
+**Local Dev**: Direct API calls using keys from `.env` file.
+
+### Services
+
+| Service            | Provider                | Purpose                                                    |
+| ------------------ | ----------------------- | ---------------------------------------------------------- |
+| **Transcription**  | OpenAI Whisper API      | Speech-to-text conversion                                  |
+| **Interpretation** | AWS Bedrock (Llama 3.3) | Intent classification, sentiment analysis, name correction |
+
+### Configuration (`src/ai/config.js`)
+
+```javascript
+// Automatically uses Lambda proxy in production, direct API in local dev
+USE_LAMBDA_PROXY = !isLocalDev; // true on GitHub Pages, false on localhost
+LAMBDA_PROXY_URL = "https://xxx.lambda-url.us-east-1.on.aws";
+
+// Local dev only (from .env):
+OPENAI_API_KEY; // OpenAI API key for transcription
+AWS_BEDROCK_API_KEY; // AWS Bedrock API key for Llama 3.3
+AWS_REGION; // Default: us-east-1
+AWS_BEDROCK_MODEL_ID; // Default: us.meta.llama3-3-70b-instruct-v1:0
+```
+
+### Environment Variables (`.env`)
+
+For local development, create a `.env` file (not committed to git):
+
+```bash
+VITE_OPENAI_API_KEY=sk-proj-...
+VITE_AWS_BEDROCK_API_KEY=ABSK...
+VITE_AWS_REGION=us-east-1
+```
+
+### Lambda Proxy (`lambda/index.mjs`)
+
+For production deployment (GitHub Pages), API keys are stored securely in AWS Lambda environment variables. The Lambda handles:
+
+- `/transcribe` - Proxies audio to OpenAI Whisper API
+- `/interpret` - Proxies text to AWS Bedrock Converse API
+
+### Interpretation Response Format
+
+The Llama 3.3 model returns structured JSON:
+
+```json
+{
+  "intent": "greeting|farewell|command|question|acknowledgment|reassuring|negative|other",
+  "confidence": 0.95,
+  "is_greeting": true,
+  "is_reassuring": false,
+  "is_goodbye": false,
+  "sentiment": "friendly|neutral|unfriendly|hostile",
+  "score": 0.8,
+  "is_rude": false,
+  "corrected_transcription": "Hello Blit!",
+  "robot_directive": { ... }
+}
+```
+
+**Special Features:**
+
+- **Name Correction**: Automatically corrects sound-alikes to robot names (Blit, Baud, Modem)
+- **Game State Evaluation**: Evaluates `is_greeting`, `is_reassuring`, `is_goodbye` for game logic
+- **Sentiment Analysis**: Detects emotional tone for robot reactions
+
+### Module Reference
+
 | Module              | Responsibility                             |
 | ------------------- | ------------------------------------------ |
 | `AIManager.js`      | Central AI orchestration                   |
-| `ApiClient.js`      | HTTP communication with SAM3 server        |
+| `ApiClient.js`      | HTTP client for OpenAI & Bedrock APIs      |
+| `config.js`         | API endpoints, keys, Lambda proxy config   |
 | `CameraCapture.js`  | Camera frame capture, head transform       |
 | `ObjectTracker.js`  | Multi-view object tracking with confidence |
 | `DepthProcessor.js` | Depth map processing, world positioning    |
@@ -369,9 +447,19 @@ features: {
 | B (right/left)  | Reset all tracked objects         |
 | Trigger (right) | Place sphere at hit test position |
 
-## Backend Server (SAM3)
+## Backend Services
 
-The application expects a SAM3 server running at `localhost:8002`:
+### Cloud AI Services (Required)
+
+| Service            | Endpoint                                  | Purpose                             |
+| ------------------ | ----------------------------------------- | ----------------------------------- |
+| **OpenAI Whisper** | `api.openai.com/v1/audio/transcriptions`  | Speech-to-text                      |
+| **AWS Bedrock**    | `bedrock-runtime.us-east-1.amazonaws.com` | Llama 3.3 inference                 |
+| **Lambda Proxy**   | Custom Function URL                       | Secure API key proxy for production |
+
+### SAM3 Server (Optional)
+
+For object detection features, a SAM3 server at `localhost:8002`:
 
 - **`/segment/voice`**: Accepts image + audio, returns detections with masks
 - **`/segment/json`**: Accepts image + text prompts, returns detections
@@ -380,41 +468,74 @@ The application expects a SAM3 server running at `localhost:8002`:
 ## Development
 
 ```bash
-npm run dev    # Start Vite dev server with HTTPS
+npm run dev    # Start Vite dev server with HTTPS (port 8081)
 ```
 
 **Requirements:**
 
 - Node.js >= 20.19.0
-- SAM3 server running on port 8002
-- Meta Quest 3 (or Quest Browser with passthrough)
+- Meta Quest 3 (or desktop browser with IWER extension)
+- OpenAI API key (for transcription)
+- AWS Bedrock API key (for interpretation)
+
+**Environment Setup:**
+
+Create `.env` in project root:
+
+```bash
+VITE_OPENAI_API_KEY=sk-proj-your-key-here
+VITE_AWS_BEDROCK_API_KEY=your-bedrock-api-key
+```
 
 **Emulator Mode:**
 
-- Detected via `localhost` hostname
+- Detected via `localhost` hostname OR non-Quest user agent
 - Bypasses Quest-only platform check
-- Disables camera features
-- Hit tests may not work
+- Disables camera features (suppresses "No back-facing camera" errors)
+- Uses IWER (Immersive Web Emulation Runtime) for WebXR
+
+## Deployment
+
+### GitHub Pages
+
+```bash
+npm run build           # Build to dist/
+npx gh-pages -d dist    # Deploy to gh-pages branch
+```
+
+**Important:** The `base` path in `vite.config.js` must match your GitHub Pages path (e.g., `/nano/`).
+
+### Lambda Proxy Setup
+
+For production, deploy the Lambda proxy to hide API keys:
+
+1. Create Lambda function from `lambda/index.mjs`
+2. Set environment variables:
+   - `OPENAI_API_KEY`
+   - `AWS_BEDROCK_API_KEY`
+   - `BEDROCK_REGION` (default: us-east-1)
+3. Create Function URL with CORS enabled for your domain
+4. Update `LAMBDA_PROXY_URL` in `src/ai/config.js`
 
 ## Dependencies
+
+### Runtime
 
 - **`@iwsdk/core`** (0.2.1) - Core framework
 - **`@iwsdk/xr-input`** - XR input handling
 - **`@pmndrs/uikit-horizon`** - UI kit for spatial interfaces
 - **`three`** (via `super-three@0.177.0`) - 3D graphics
-- **Vite plugins**: IWER injection, UIKitML compilation, GLTF optimization
+- **`tslib`** - TypeScript runtime helpers
 
-## Web Preview Images
+### Build
 
-The following preview images are referenced in `index.html` meta tags and should be added to the `public/images/` directory:
+- **Vite** - Build tool and dev server
+- **`@iwsdk/vite-plugin-iwer`** - IWER injection for emulator
+- **`@iwsdk/vite-plugin-uikitml`** - UIKitML compilation
+- **`gh-pages`** - GitHub Pages deployment
 
-- **`preview-og.jpg`** - Open Graph preview image (1200x630px recommended)
+### Cloud Services
 
-  - Used for Facebook, LinkedIn, and other Open Graph platforms
-  - Should showcase the robot swarm in mixed reality environment
-
-- **`preview-twitter.jpg`** - Twitter Card preview image (1200x675px recommended)
-  - Used for Twitter/X link previews
-  - Should showcase the robot swarm in mixed reality environment
-
-Update the `og:url` and `twitter:url` meta tags in `index.html` with your actual domain when deploying.
+- **OpenAI Whisper API** - Speech-to-text
+- **AWS Bedrock** - Llama 3.3 70B inference
+- **AWS Lambda** - Secure API proxy

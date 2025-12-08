@@ -270,10 +270,20 @@ export class ApiClient {
         this.logger.log(`Sending to Lambda proxy for interpretation...`);
         this.logger.log(`User message: "${transcription}"`);
 
+        // Extract only serializable gameState fields (avoid circular refs from ECS world)
+        const safeGameState = gameState
+          ? {
+              currentState: gameState.currentState,
+              greetingResult: gameState.greetingResult,
+              introPlayed: gameState.introPlayed,
+              callAnswered: gameState.callAnswered,
+            }
+          : null;
+
         const response = await fetch(`${LAMBDA_PROXY_URL}/interpret`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcription, gameState }),
+          body: JSON.stringify({ transcription, gameState: safeGameState }),
         });
 
         if (!response.ok) {
