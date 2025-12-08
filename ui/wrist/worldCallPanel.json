@@ -1,0 +1,302 @@
+{
+  "element": {
+    "sourceTag": "panel",
+    "type": "custom",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "VIDCONF"
+            ],
+            "properties": {
+              "class": "app-title"
+            },
+            "dataUid": "uid-3"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "sourceTag": "text",
+                    "type": "custom",
+                    "children": [
+                      "CONNECTED"
+                    ],
+                    "properties": {
+                      "id": "status-text",
+                      "class": "status-text"
+                    },
+                    "dataUid": "uid-6"
+                  }
+                ],
+                "properties": {},
+                "dataUid": "uid-5"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "class": "status-dot"
+                },
+                "dataUid": "uid-7"
+              }
+            ],
+            "properties": {
+              "class": "status-row"
+            },
+            "dataUid": "uid-4"
+          }
+        ],
+        "properties": {
+          "class": "header-row"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [],
+        "properties": {
+          "class": "video-container"
+        },
+        "dataUid": "uid-8"
+      }
+    ],
+    "properties": {
+      "class": "call-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "call-panel": {
+      "content": {
+        "flexDirection": "column",
+        "width": "132px",
+        "padding": "7px",
+        "alignItems": "center",
+        "backgroundColor": "rgba(8, 24, 36, 0.95)",
+        "borderRadius": 6,
+        "border": "1px solid rgba(0, 200, 220, 0.6)"
+      }
+    },
+    "header-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "space-between",
+        "width": "118px",
+        "marginBottom": "5px"
+      }
+    },
+    "app-title": {
+      "content": {
+        "fontSize": "7px",
+        "fontWeight": "700",
+        "color": "#00d4e6",
+        "letterSpacing": "2px",
+        "flexGrow": "1"
+      }
+    },
+    "status-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "flex-end",
+        "gap": "4px"
+      }
+    },
+    "status-dot": {
+      "content": {
+        "width": "5px",
+        "height": "5px",
+        "borderRadius": 2,
+        "backgroundColor": "#4ade80"
+      }
+    },
+    "status-text": {
+      "content": {
+        "fontSize": "5px",
+        "fontWeight": "600",
+        "color": "rgba(0, 212, 230, 0.9)",
+        "letterSpacing": "1px",
+        "textAlign": "right"
+      }
+    },
+    "video-container": {
+      "content": {
+        "width": "118px",
+        "height": "118px",
+        "backgroundColor": "rgba(0, 40, 60, 0.6)",
+        "borderRadius": 4,
+        "border": "1px solid rgba(0, 180, 200, 0.3)",
+        "overflow": "hidden",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "justifyContent": "center"
+      }
+    }
+  },
+  "ranges": {
+    "call-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 13
+      }
+    },
+    "header-row": {
+      "start": {
+        "line": 11,
+        "column": 2
+      },
+      "end": {
+        "line": 11,
+        "column": 13
+      }
+    },
+    "app-title": {
+      "start": {
+        "line": 19,
+        "column": 2
+      },
+      "end": {
+        "line": 19,
+        "column": 12
+      }
+    },
+    "status-row": {
+      "start": {
+        "line": 27,
+        "column": 2
+      },
+      "end": {
+        "line": 27,
+        "column": 13
+      }
+    },
+    "status-dot": {
+      "start": {
+        "line": 34,
+        "column": 2
+      },
+      "end": {
+        "line": 34,
+        "column": 13
+      }
+    },
+    "status-text": {
+      "start": {
+        "line": 41,
+        "column": 2
+      },
+      "end": {
+        "line": 41,
+        "column": 14
+      }
+    },
+    "video-container": {
+      "start": {
+        "line": 49,
+        "column": 2
+      },
+      "end": {
+        "line": 49,
+        "column": 18
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 62,
+        "column": 0
+      },
+      "end": {
+        "line": 73,
+        "column": 8
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 63,
+        "column": 2
+      },
+      "end": {
+        "line": 69,
+        "column": 8
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 64,
+        "column": 4
+      },
+      "end": {
+        "line": 64,
+        "column": 42
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 65,
+        "column": 4
+      },
+      "end": {
+        "line": 68,
+        "column": 10
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 66,
+        "column": 6
+      },
+      "end": {
+        "line": 66,
+        "column": 76
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 66,
+        "column": 11
+      },
+      "end": {
+        "line": 66,
+        "column": 70
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 67,
+        "column": 6
+      },
+      "end": {
+        "line": 67,
+        "column": 36
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 71,
+        "column": 2
+      },
+      "end": {
+        "line": 72,
+        "column": 8
+      }
+    }
+  }
+}

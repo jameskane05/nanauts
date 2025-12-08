@@ -1,0 +1,429 @@
+{
+  "element": {
+    "sourceTag": "panel",
+    "type": "custom",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "SCENE SETUP REQUIRED"
+            ],
+            "properties": {
+              "class": "title"
+            },
+            "dataUid": "uid-3"
+          }
+        ],
+        "properties": {
+          "class": "header-row"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "This mixed reality experience requires Meta Quest scene understanding."
+            ],
+            "properties": {
+              "class": "message-text"
+            },
+            "dataUid": "uid-5"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Please initiate room capture."
+            ],
+            "properties": {
+              "class": "message-text-highlight"
+            },
+            "dataUid": "uid-6"
+          }
+        ],
+        "properties": {
+          "class": "content-area"
+        },
+        "dataUid": "uid-4"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "PRESS TO START"
+            ],
+            "properties": {
+              "id": "confirm-text",
+              "class": "confirm-text"
+            },
+            "dataUid": "uid-8"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "sourceTag": "text",
+                "type": "custom",
+                "children": [
+                  "A"
+                ],
+                "properties": {
+                  "id": "button-letter",
+                  "class": "button-letter"
+                },
+                "dataUid": "uid-10"
+              }
+            ],
+            "properties": {
+              "id": "button-hint",
+              "class": "button-hint"
+            },
+            "dataUid": "uid-9"
+          }
+        ],
+        "properties": {
+          "id": "confirm-btn",
+          "class": "confirm-row"
+        },
+        "dataUid": "uid-7"
+      }
+    ],
+    "properties": {
+      "class": "room-capture-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "room-capture-panel": {
+      "content": {
+        "flexDirection": "column",
+        "width": "320px",
+        "padding": "24px",
+        "alignItems": "center",
+        "backgroundColor": "rgba(8, 24, 36, 0.95)",
+        "borderRadius": 16,
+        "border": "2px solid rgba(255, 180, 0, 0.7)"
+      }
+    },
+    "header-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "gap": "12px",
+        "marginBottom": "16px"
+      }
+    },
+    "icon": {
+      "content": {
+        "fontSize": "28px"
+      }
+    },
+    "title": {
+      "content": {
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "color": "#ffb400",
+        "letterSpacing": "2px",
+        "textAlign": "center"
+      }
+    },
+    "content-area": {
+      "content": {
+        "width": "280px",
+        "backgroundColor": "rgba(255, 180, 0, 0.1)",
+        "borderRadius": 10,
+        "border": "1px solid rgba(255, 180, 0, 0.3)",
+        "padding": "16px",
+        "marginBottom": "16px",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "gap": "12px"
+      }
+    },
+    "message-text": {
+      "content": {
+        "fontSize": "13px",
+        "color": "rgba(255, 255, 255, 0.85)",
+        "textAlign": "center",
+        "lineHeight": "1.5"
+      }
+    },
+    "message-text-highlight": {
+      "content": {
+        "fontSize": "13px",
+        "color": "#ffb400",
+        "fontWeight": "600",
+        "textAlign": "center"
+      }
+    },
+    "confirm-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "gap": "12px",
+        "padding": "14px 24px",
+        "backgroundColor": "rgba(255, 180, 0, 0.2)",
+        "borderRadius": 10,
+        "border": "2px solid rgba(255, 180, 0, 0.6)",
+        "width": "100%",
+        "justifyContent": "center",
+        "minHeight": "56px"
+      }
+    },
+    "button-hint": {
+      "content": {
+        "width": "32px",
+        "height": "32px",
+        "backgroundColor": "#ffb400",
+        "borderRadius": 16,
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "center"
+      }
+    },
+    "button-letter": {
+      "content": {
+        "fontSize": "16px",
+        "fontWeight": "700",
+        "color": "rgba(8, 24, 36, 1)",
+        "textAlign": "center"
+      }
+    },
+    "confirm-text": {
+      "content": {
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "color": "#ffb400",
+        "letterSpacing": "1px"
+      }
+    }
+  },
+  "ranges": {
+    "room-capture-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 21
+      }
+    },
+    "header-row": {
+      "start": {
+        "line": 11,
+        "column": 2
+      },
+      "end": {
+        "line": 11,
+        "column": 13
+      }
+    },
+    "icon": {
+      "start": {
+        "line": 19,
+        "column": 2
+      },
+      "end": {
+        "line": 19,
+        "column": 7
+      }
+    },
+    "title": {
+      "start": {
+        "line": 23,
+        "column": 2
+      },
+      "end": {
+        "line": 23,
+        "column": 8
+      }
+    },
+    "content-area": {
+      "start": {
+        "line": 31,
+        "column": 2
+      },
+      "end": {
+        "line": 31,
+        "column": 15
+      }
+    },
+    "message-text": {
+      "start": {
+        "line": 43,
+        "column": 2
+      },
+      "end": {
+        "line": 43,
+        "column": 15
+      }
+    },
+    "message-text-highlight": {
+      "start": {
+        "line": 50,
+        "column": 2
+      },
+      "end": {
+        "line": 50,
+        "column": 25
+      }
+    },
+    "confirm-row": {
+      "start": {
+        "line": 57,
+        "column": 2
+      },
+      "end": {
+        "line": 57,
+        "column": 14
+      }
+    },
+    "button-hint": {
+      "start": {
+        "line": 70,
+        "column": 2
+      },
+      "end": {
+        "line": 70,
+        "column": 14
+      }
+    },
+    "button-letter": {
+      "start": {
+        "line": 80,
+        "column": 2
+      },
+      "end": {
+        "line": 80,
+        "column": 16
+      }
+    },
+    "confirm-text": {
+      "start": {
+        "line": 87,
+        "column": 2
+      },
+      "end": {
+        "line": 87,
+        "column": 15
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 95,
+        "column": 0
+      },
+      "end": {
+        "line": 111,
+        "column": 8
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 96,
+        "column": 2
+      },
+      "end": {
+        "line": 98,
+        "column": 8
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 97,
+        "column": 4
+      },
+      "end": {
+        "line": 97,
+        "column": 51
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 100,
+        "column": 2
+      },
+      "end": {
+        "line": 103,
+        "column": 8
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 101,
+        "column": 4
+      },
+      "end": {
+        "line": 101,
+        "column": 108
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 102,
+        "column": 4
+      },
+      "end": {
+        "line": 102,
+        "column": 77
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 105,
+        "column": 2
+      },
+      "end": {
+        "line": 110,
+        "column": 8
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 106,
+        "column": 4
+      },
+      "end": {
+        "line": 106,
+        "column": 70
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 107,
+        "column": 4
+      },
+      "end": {
+        "line": 109,
+        "column": 10
+      }
+    },
+    "uid-10": {
+      "start": {
+        "line": 108,
+        "column": 6
+      },
+      "end": {
+        "line": 108,
+        "column": 61
+      }
+    }
+  }
+}

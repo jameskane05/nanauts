@@ -1,0 +1,89 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "Detected Mesh"
+        ],
+        "properties": {
+          "class": "label-text",
+          "id": "mesh-label-text"
+        },
+        "dataUid": "uid-2"
+      }
+    ],
+    "properties": {
+      "class": "label-container"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "label-container": {
+      "content": {
+        "alignItems": "center",
+        "padding": "1",
+        "display": "flex",
+        "flexDirection": "column",
+        "backgroundColor": "rgba(15, 15, 20, 0.9)",
+        "borderColor": "#3b82f6",
+        "borderWidth": "0.1",
+        "borderRadius": 2,
+        "minWidth": "20"
+      }
+    },
+    "label-text": {
+      "content": {
+        "fontSize": "3",
+        "fontWeight": "medium",
+        "color": "#fafafa",
+        "textAlign": "center"
+      }
+    }
+  },
+  "ranges": {
+    "label-container": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 18
+      }
+    },
+    "label-text": {
+      "start": {
+        "line": 13,
+        "column": 2
+      },
+      "end": {
+        "line": 13,
+        "column": 13
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 20,
+        "column": 0
+      },
+      "end": {
+        "line": 22,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 21,
+        "column": 2
+      },
+      "end": {
+        "line": 21,
+        "column": 68
+      }
+    }
+  }
+}

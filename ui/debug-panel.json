@@ -1,0 +1,734 @@
+{
+  "element": {
+    "sourceTag": "panel",
+    "type": "custom",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Camera State"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-3"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "-"
+            ],
+            "properties": {
+              "id": "camera-state",
+              "class": "debug-value status-inactive"
+            },
+            "dataUid": "uid-4"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "XR Visibility"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-6"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "-"
+            ],
+            "properties": {
+              "id": "xr-visibility",
+              "class": "debug-value status-inactive"
+            },
+            "dataUid": "uid-7"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-5"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Capture Timer"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-9"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "0.0s"
+            ],
+            "properties": {
+              "id": "capture-timer",
+              "class": "debug-value"
+            },
+            "dataUid": "uid-10"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-8"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Processing"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-12"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Idle"
+            ],
+            "properties": {
+              "id": "processing-state",
+              "class": "debug-value status-inactive"
+            },
+            "dataUid": "uid-13"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-11"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "API Status"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-15"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "-"
+            ],
+            "properties": {
+              "id": "api-status",
+              "class": "debug-value status-inactive"
+            },
+            "dataUid": "uid-16"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-14"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Detections"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-18"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "0"
+            ],
+            "properties": {
+              "id": "detections-count",
+              "class": "debug-value"
+            },
+            "dataUid": "uid-19"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-17"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Head Position"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-21"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "0.00, 0.00, 0.00"
+            ],
+            "properties": {
+              "id": "head-position",
+              "class": "debug-value"
+            },
+            "dataUid": "uid-22"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-20"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Camera Intrinsics"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-24"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Approximated"
+            ],
+            "properties": {
+              "id": "camera-intrinsics",
+              "class": "debug-value status-inactive"
+            },
+            "dataUid": "uid-25"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-23"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "Last Response"
+            ],
+            "properties": {
+              "class": "debug-label"
+            },
+            "dataUid": "uid-27"
+          },
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "-"
+            ],
+            "properties": {
+              "id": "last-response",
+              "class": "debug-value status-inactive"
+            },
+            "dataUid": "uid-28"
+          }
+        ],
+        "properties": {
+          "class": "debug-section"
+        },
+        "dataUid": "uid-26"
+      }
+    ],
+    "properties": {
+      "class": "debug-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "debug-panel": {
+      "content": {
+        "padding": "12px",
+        "flexDirection": "column",
+        "width": "320px",
+        "height": "240px",
+        "backgroundColor": "rgba(0, 0, 0, 0.85)",
+        "border": "1px solid rgba(255, 255, 255, 0.2)",
+        "borderRadius": 8,
+        "backdropFilter": "blur(10px)"
+      }
+    },
+    "debug-section": {
+      "content": {
+        "marginBottom": "8px",
+        "paddingBottom": "8px",
+        "borderBottom": "1px solid rgba(255, 255, 255, 0.1)",
+        "last-child": {
+          "borderBottom": "none",
+          "marginBottom": "0",
+          "paddingBottom": "0"
+        }
+      }
+    },
+    "debug-label": {
+      "content": {
+        "fontSize": "10px",
+        "color": "rgba(255, 255, 255, 0.6)",
+        "marginBottom": "2px",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.5px"
+      }
+    },
+    "debug-value": {
+      "content": {
+        "fontSize": "12px",
+        "color": "rgba(255, 255, 255, 0.9)",
+        "fontFamily": "monospace",
+        "marginBottom": "4px"
+      }
+    },
+    "status-good": {
+      "content": {
+        "color": "#4ade80"
+      }
+    },
+    "status-warning": {
+      "content": {
+        "color": "#fbbf24"
+      }
+    },
+    "status-error": {
+      "content": {
+        "color": "#f87171"
+      }
+    },
+    "status-inactive": {
+      "content": {
+        "color": "rgba(255, 255, 255, 0.4)"
+      }
+    }
+  },
+  "ranges": {
+    "debug-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 14
+      }
+    },
+    "debug-section": {
+      "start": {
+        "line": 12,
+        "column": 2
+      },
+      "end": {
+        "line": 12,
+        "column": 16
+      }
+    },
+    "debug-label": {
+      "start": {
+        "line": 24,
+        "column": 2
+      },
+      "end": {
+        "line": 24,
+        "column": 14
+      }
+    },
+    "debug-value": {
+      "start": {
+        "line": 32,
+        "column": 2
+      },
+      "end": {
+        "line": 32,
+        "column": 14
+      }
+    },
+    "status-good": {
+      "start": {
+        "line": 39,
+        "column": 2
+      },
+      "end": {
+        "line": 39,
+        "column": 14
+      }
+    },
+    "status-warning": {
+      "start": {
+        "line": 43,
+        "column": 2
+      },
+      "end": {
+        "line": 43,
+        "column": 17
+      }
+    },
+    "status-error": {
+      "start": {
+        "line": 47,
+        "column": 2
+      },
+      "end": {
+        "line": 47,
+        "column": 15
+      }
+    },
+    "status-inactive": {
+      "start": {
+        "line": 51,
+        "column": 2
+      },
+      "end": {
+        "line": 51,
+        "column": 18
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 56,
+        "column": 0
+      },
+      "end": {
+        "line": 101,
+        "column": 8
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 57,
+        "column": 2
+      },
+      "end": {
+        "line": 60,
+        "column": 8
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 58,
+        "column": 4
+      },
+      "end": {
+        "line": 58,
+        "column": 49
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 59,
+        "column": 4
+      },
+      "end": {
+        "line": 59,
+        "column": 72
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 62,
+        "column": 2
+      },
+      "end": {
+        "line": 65,
+        "column": 8
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 63,
+        "column": 4
+      },
+      "end": {
+        "line": 63,
+        "column": 50
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 64,
+        "column": 4
+      },
+      "end": {
+        "line": 64,
+        "column": 73
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 67,
+        "column": 2
+      },
+      "end": {
+        "line": 70,
+        "column": 8
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 68,
+        "column": 4
+      },
+      "end": {
+        "line": 68,
+        "column": 50
+      }
+    },
+    "uid-10": {
+      "start": {
+        "line": 69,
+        "column": 4
+      },
+      "end": {
+        "line": 69,
+        "column": 60
+      }
+    },
+    "uid-11": {
+      "start": {
+        "line": 72,
+        "column": 2
+      },
+      "end": {
+        "line": 75,
+        "column": 8
+      }
+    },
+    "uid-12": {
+      "start": {
+        "line": 73,
+        "column": 4
+      },
+      "end": {
+        "line": 73,
+        "column": 47
+      }
+    },
+    "uid-13": {
+      "start": {
+        "line": 74,
+        "column": 4
+      },
+      "end": {
+        "line": 74,
+        "column": 79
+      }
+    },
+    "uid-14": {
+      "start": {
+        "line": 77,
+        "column": 2
+      },
+      "end": {
+        "line": 80,
+        "column": 8
+      }
+    },
+    "uid-15": {
+      "start": {
+        "line": 78,
+        "column": 4
+      },
+      "end": {
+        "line": 78,
+        "column": 47
+      }
+    },
+    "uid-16": {
+      "start": {
+        "line": 79,
+        "column": 4
+      },
+      "end": {
+        "line": 79,
+        "column": 70
+      }
+    },
+    "uid-17": {
+      "start": {
+        "line": 82,
+        "column": 2
+      },
+      "end": {
+        "line": 85,
+        "column": 8
+      }
+    },
+    "uid-18": {
+      "start": {
+        "line": 83,
+        "column": 4
+      },
+      "end": {
+        "line": 83,
+        "column": 47
+      }
+    },
+    "uid-19": {
+      "start": {
+        "line": 84,
+        "column": 4
+      },
+      "end": {
+        "line": 84,
+        "column": 60
+      }
+    },
+    "uid-20": {
+      "start": {
+        "line": 87,
+        "column": 2
+      },
+      "end": {
+        "line": 90,
+        "column": 8
+      }
+    },
+    "uid-21": {
+      "start": {
+        "line": 88,
+        "column": 4
+      },
+      "end": {
+        "line": 88,
+        "column": 50
+      }
+    },
+    "uid-22": {
+      "start": {
+        "line": 89,
+        "column": 4
+      },
+      "end": {
+        "line": 89,
+        "column": 72
+      }
+    },
+    "uid-23": {
+      "start": {
+        "line": 92,
+        "column": 2
+      },
+      "end": {
+        "line": 95,
+        "column": 8
+      }
+    },
+    "uid-24": {
+      "start": {
+        "line": 93,
+        "column": 4
+      },
+      "end": {
+        "line": 93,
+        "column": 54
+      }
+    },
+    "uid-25": {
+      "start": {
+        "line": 94,
+        "column": 4
+      },
+      "end": {
+        "line": 94,
+        "column": 88
+      }
+    },
+    "uid-26": {
+      "start": {
+        "line": 97,
+        "column": 2
+      },
+      "end": {
+        "line": 100,
+        "column": 8
+      }
+    },
+    "uid-27": {
+      "start": {
+        "line": 98,
+        "column": 4
+      },
+      "end": {
+        "line": 98,
+        "column": 50
+      }
+    },
+    "uid-28": {
+      "start": {
+        "line": 99,
+        "column": 4
+      },
+      "end": {
+        "line": 99,
+        "column": 73
+      }
+    }
+  }
+}

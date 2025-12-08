@@ -1,0 +1,581 @@
+{
+  "element": {
+    "sourceTag": "panel",
+    "type": "custom",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "text",
+            "type": "custom",
+            "children": [
+              "VIDCONF"
+            ],
+            "properties": {
+              "class": "app-title"
+            },
+            "dataUid": "uid-3"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "sourceTag": "text",
+                "type": "custom",
+                "children": [
+                  "RINGING"
+                ],
+                "properties": {
+                  "id": "status-text",
+                  "class": "status-text"
+                },
+                "dataUid": "uid-5"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "id": "status-dot",
+                  "class": "status-dot"
+                },
+                "dataUid": "uid-6"
+              }
+            ],
+            "properties": {
+              "class": "status-row"
+            },
+            "dataUid": "uid-4"
+          }
+        ],
+        "properties": {
+          "class": "header-row"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "sourceTag": "text",
+                "type": "custom",
+                "children": [
+                  "INCOMING CALL FROM"
+                ],
+                "properties": {
+                  "class": "incoming-label"
+                },
+                "dataUid": "uid-9"
+              },
+              {
+                "sourceTag": "text",
+                "type": "custom",
+                "children": [
+                  "Prof. Sea"
+                ],
+                "properties": {
+                  "id": "caller-name",
+                  "class": "caller-name"
+                },
+                "dataUid": "uid-10"
+              }
+            ],
+            "properties": {
+              "id": "incoming-info",
+              "class": "incoming-info"
+            },
+            "dataUid": "uid-8"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "sourceTag": "text",
+                "type": "custom",
+                "children": [
+                  "PRESS TO ANSWER"
+                ],
+                "properties": {
+                  "id": "prompt-text",
+                  "class": "prompt-text"
+                },
+                "dataUid": "uid-12"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "sourceTag": "text",
+                    "type": "custom",
+                    "children": [
+                      "A"
+                    ],
+                    "properties": {
+                      "id": "button-letter",
+                      "class": "button-letter"
+                    },
+                    "dataUid": "uid-14"
+                  }
+                ],
+                "properties": {
+                  "id": "button-hint",
+                  "class": "button-hint"
+                },
+                "dataUid": "uid-13"
+              }
+            ],
+            "properties": {
+              "id": "incoming-prompt",
+              "class": "prompt-row"
+            },
+            "dataUid": "uid-11"
+          }
+        ],
+        "properties": {
+          "id": "video-container",
+          "class": "video-container"
+        },
+        "dataUid": "uid-7"
+      }
+    ],
+    "properties": {
+      "class": "call-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "call-panel": {
+      "content": {
+        "flexDirection": "column",
+        "width": "200px",
+        "padding": "12px",
+        "alignItems": "center",
+        "backgroundColor": "rgba(8, 24, 36, 0.95)",
+        "borderRadius": 10,
+        "border": "2px solid rgba(0, 200, 220, 0.6)"
+      }
+    },
+    "header-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "space-between",
+        "width": "176px",
+        "marginBottom": "8px"
+      }
+    },
+    "app-title": {
+      "content": {
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "color": "#00d4e6",
+        "letterSpacing": "3px",
+        "flexGrow": "1"
+      }
+    },
+    "status-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "flex-end",
+        "gap": "6px"
+      }
+    },
+    "status-dot": {
+      "content": {
+        "width": "8px",
+        "height": "8px",
+        "borderRadius": 4,
+        "backgroundColor": "#f0ad4e"
+      }
+    },
+    "status-text": {
+      "content": {
+        "fontSize": "10px",
+        "fontWeight": "600",
+        "color": "rgba(240, 173, 78, 0.9)",
+        "letterSpacing": "2px",
+        "textAlign": "right"
+      }
+    },
+    "video-container": {
+      "content": {
+        "width": "176px",
+        "height": "176px",
+        "backgroundColor": "rgba(0, 40, 60, 0.6)",
+        "borderRadius": 6,
+        "border": "1px solid rgba(0, 180, 200, 0.3)",
+        "overflow": "hidden",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "justifyContent": "flex-start",
+        "positionType": "relative"
+      }
+    },
+    "incoming-info": {
+      "content": {
+        "flexDirection": "column",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "gap": "6px",
+        "height": "120px",
+        "paddingTop": "10px"
+      }
+    },
+    "incoming-label": {
+      "content": {
+        "fontSize": "10px",
+        "fontWeight": "600",
+        "color": "rgba(0, 200, 220, 0.6)",
+        "textAlign": "center",
+        "width": "100%",
+        "letterSpacing": "1px"
+      }
+    },
+    "caller-name": {
+      "content": {
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "color": "#ffffff",
+        "textAlign": "center",
+        "width": "100%",
+        "letterSpacing": "1px"
+      }
+    },
+    "prompt-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "gap": "8px",
+        "padding": "8px 12px",
+        "backgroundColor": "rgba(0, 70, 90, 0.9)",
+        "borderRadius": 6,
+        "border": "2px solid rgba(0, 200, 220, 0.5)",
+        "justifyContent": "center",
+        "positionType": "absolute",
+        "positionBottom": "8px",
+        "positionLeft": "8px",
+        "positionRight": "8px"
+      }
+    },
+    "button-hint": {
+      "content": {
+        "width": "26px",
+        "height": "26px",
+        "backgroundColor": "#00d4e6",
+        "borderRadius": 13,
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "center"
+      }
+    },
+    "button-letter": {
+      "content": {
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "color": "rgba(8, 24, 36, 1)",
+        "textAlign": "center"
+      }
+    },
+    "prompt-text": {
+      "content": {
+        "fontSize": "11px",
+        "fontWeight": "700",
+        "color": "#00d4e6",
+        "letterSpacing": "1px"
+      }
+    }
+  },
+  "ranges": {
+    "call-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 13
+      }
+    },
+    "header-row": {
+      "start": {
+        "line": 11,
+        "column": 2
+      },
+      "end": {
+        "line": 11,
+        "column": 13
+      }
+    },
+    "app-title": {
+      "start": {
+        "line": 19,
+        "column": 2
+      },
+      "end": {
+        "line": 19,
+        "column": 12
+      }
+    },
+    "status-row": {
+      "start": {
+        "line": 27,
+        "column": 2
+      },
+      "end": {
+        "line": 27,
+        "column": 13
+      }
+    },
+    "status-dot": {
+      "start": {
+        "line": 34,
+        "column": 2
+      },
+      "end": {
+        "line": 34,
+        "column": 13
+      }
+    },
+    "status-text": {
+      "start": {
+        "line": 41,
+        "column": 2
+      },
+      "end": {
+        "line": 41,
+        "column": 14
+      }
+    },
+    "video-container": {
+      "start": {
+        "line": 49,
+        "column": 2
+      },
+      "end": {
+        "line": 49,
+        "column": 18
+      }
+    },
+    "incoming-info": {
+      "start": {
+        "line": 62,
+        "column": 2
+      },
+      "end": {
+        "line": 62,
+        "column": 16
+      }
+    },
+    "incoming-label": {
+      "start": {
+        "line": 71,
+        "column": 2
+      },
+      "end": {
+        "line": 71,
+        "column": 17
+      }
+    },
+    "caller-name": {
+      "start": {
+        "line": 80,
+        "column": 2
+      },
+      "end": {
+        "line": 80,
+        "column": 14
+      }
+    },
+    "prompt-row": {
+      "start": {
+        "line": 89,
+        "column": 2
+      },
+      "end": {
+        "line": 89,
+        "column": 13
+      }
+    },
+    "button-hint": {
+      "start": {
+        "line": 104,
+        "column": 2
+      },
+      "end": {
+        "line": 104,
+        "column": 14
+      }
+    },
+    "button-letter": {
+      "start": {
+        "line": 114,
+        "column": 2
+      },
+      "end": {
+        "line": 114,
+        "column": 16
+      }
+    },
+    "prompt-text": {
+      "start": {
+        "line": 121,
+        "column": 2
+      },
+      "end": {
+        "line": 121,
+        "column": 14
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 130,
+        "column": 0
+      },
+      "end": {
+        "line": 153,
+        "column": 8
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 131,
+        "column": 2
+      },
+      "end": {
+        "line": 137,
+        "column": 8
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 132,
+        "column": 4
+      },
+      "end": {
+        "line": 132,
+        "column": 42
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 133,
+        "column": 4
+      },
+      "end": {
+        "line": 136,
+        "column": 10
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 134,
+        "column": 6
+      },
+      "end": {
+        "line": 134,
+        "column": 63
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 135,
+        "column": 6
+      },
+      "end": {
+        "line": 135,
+        "column": 52
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 139,
+        "column": 2
+      },
+      "end": {
+        "line": 151,
+        "column": 8
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 140,
+        "column": 4
+      },
+      "end": {
+        "line": 143,
+        "column": 10
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 141,
+        "column": 6
+      },
+      "end": {
+        "line": 141,
+        "column": 60
+      }
+    },
+    "uid-10": {
+      "start": {
+        "line": 142,
+        "column": 6
+      },
+      "end": {
+        "line": 142,
+        "column": 65
+      }
+    },
+    "uid-11": {
+      "start": {
+        "line": 145,
+        "column": 4
+      },
+      "end": {
+        "line": 150,
+        "column": 10
+      }
+    },
+    "uid-12": {
+      "start": {
+        "line": 147,
+        "column": 0
+      },
+      "end": {
+        "line": 147,
+        "column": 65
+      }
+    },
+    "uid-13": {
+      "start": {
+        "line": 147,
+        "column": 71
+      },
+      "end": {
+        "line": 149,
+        "column": 12
+      }
+    },
+    "uid-14": {
+      "start": {
+        "line": 148,
+        "column": 8
+      },
+      "end": {
+        "line": 148,
+        "column": 63
+      }
+    }
+  }
+}
