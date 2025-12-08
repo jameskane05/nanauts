@@ -1805,6 +1805,75 @@ export class RobotSystem extends createSystem({}) {
     return false;
   }
 
+  /**
+   * Check if robot should avoid the player position and adjust navigation.
+   * Prevents robots from steering through the user's legs.
+   */
+  _checkPlayerAvoidance(entityIndex, agent, agentId) {
+    const player = this.world?.player;
+    if (!player?.head) return false;
+
+    // Get player head position and project down to floor level
+    player.head.getWorldPosition(this._tempVec3);
+    const playerFloorX = this._tempVec3.x;
+    const playerFloorZ = this._tempVec3.z;
+    // Use robot's Y since they're on the same navmesh level
+    const playerFloorY = agent.position[1];
+
+    // Avoidance radius around player (0.15m)
+    const avoidRadius = 0.15;
+    const avoidRadiusSq = avoidRadius * avoidRadius;
+
+    // Calculate distance from robot to player floor position
+    const dx = agent.position[0] - playerFloorX;
+    const dz = agent.position[2] - playerFloorZ;
+    const distSq = dx * dx + dz * dz;
+
+    // Not within avoidance radius
+    if (distSq >= avoidRadiusSq) return false;
+
+    const dist = Math.sqrt(distSq);
+    if (dist < 0.01) return false; // Too close to calculate direction
+
+    // Calculate avoidance direction (away from player)
+    const avoidStrength = 1.0 - distSq / avoidRadiusSq;
+    const minExitDistance = dist + (avoidRadius - dist) + 0.1;
+    const maxAvoidDistance = 0.3 * avoidStrength;
+    const avoidDistance = Math.max(minExitDistance, maxAvoidDistance);
+
+    const avoidDirX = (dx / dist) * avoidDistance;
+    const avoidDirZ = (dz / dist) * avoidDistance;
+
+    const avoidTarget = [
+      agent.position[0] + avoidDirX,
+      playerFloorY,
+      agent.position[2] + avoidDirZ,
+    ];
+
+    // Find nearest navmesh point to avoidance target
+    if (this.navMesh) {
+      const nearestResult = findNearestPoly(
+        createFindNearestPolyResult(),
+        this.navMesh,
+        avoidTarget,
+        [0.5, 0.5, 0.5],
+        DEFAULT_QUERY_FILTER
+      );
+
+      if (nearestResult.success) {
+        crowd.requestMoveTarget(
+          this.agents,
+          agentId,
+          nearestResult.nodeRef,
+          nearestResult.position
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   setGoalFromPosition(pos) {
     this.navigationManager.setGoalFromPosition(pos);
     this.goalPosition = this.navigationManager.goalPosition;
@@ -1823,6 +1892,9 @@ export class RobotSystem extends createSystem({}) {
       return;
     }
 
+    // Track if first panic dialog has been played
+    let firstPanicDialogPlayed = false;
+
     // Wire up UI callbacks if wristUI provided
     if (wristUI) {
       pim.onScoreUpdate = (current, total) => {
@@ -1837,6 +1909,16 @@ export class RobotSystem extends createSystem({}) {
       // Set callback for when panic starts
       pim.onPanicStart = () => {
         wristUI.scoreUI?.setPanicking(() => pim.isAnyRobotPanicking());
+
+        // Play "worked up" dialog on first panic only
+        if (!firstPanicDialogPlayed) {
+          firstPanicDialogPlayed = true;
+          const dialogManager = this.world?.aiManager?.dialogManager;
+          if (dialogManager) {
+            this.logger.log("Playing first panic dialog: panicWorkedUp");
+            dialogManager.playDialog("panicWorkedUp");
+          }
+        }
       };
       wristUI.showScorePanel();
 
@@ -2848,7 +2930,13 @@ export class RobotSystem extends createSystem({}) {
       } else if (!this.isStationary && !this._awaitingInterpretation) {
         // Skip navigation changes while awaiting interpretation (robots are gathering)
 
-        // Check for panic avoidance first (higher priority than goal)
+        // Check for player avoidance first (highest priority - don't walk through user's legs)
+        if (this._checkPlayerAvoidance(entityIndex, agent, agentId)) {
+          if (state) state.lastTargetTime = time;
+          continue;
+        }
+
+        // Check for panic avoidance (higher priority than goal)
         if (this._checkPanicAvoidance(entityIndex, agent, agentId)) {
           // Avoidance target set, skip other navigation
           if (state) state.lastTargetTime = time;

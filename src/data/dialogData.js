@@ -29,7 +29,7 @@ export const dialogTracks = {
   // Intro dialog - plays after user presses A to enter XR
   intro: {
     id: "intro",
-    audio: "./audio/dialog/intro.mp3",
+    audio: "./audio/dialog/00_intro.mp3",
     captions: [
       { text: "Greetings, Ambassador!", duration: 1.04 },
       {
@@ -57,7 +57,7 @@ export const dialogTracks = {
         duration: 2.6,
       },
       {
-        text: "by way of exploring your home.",
+        text: "by way of exploring your environment.",
         startTime: 19.08,
         duration: 2.1,
       },
@@ -81,11 +81,11 @@ export const dialogTracks = {
   // Portal placement instructions - plays when entering PORTAL_PLACEMENT state
   portalPlacement: {
     id: "portalPlacement",
-    audio: "./audio/dialog/our-guests-are-ready-to-join-us-now.mp3",
+    audio: "./audio/dialog/01_our-guests-are-ready-to-join-us-now.mp3",
     captions: [
       { text: "Our guests are ready to join us.", duration: 2.1 },
       {
-        text: "Just set the coordinates in an open area or a wall.",
+        text: "Just set the coordinates in an open area on the floor.",
         startTime: 3.0,
         duration: 3.02,
       },
@@ -103,13 +103,49 @@ export const dialogTracks = {
     delay: 0.5,
     onComplete: (gameState) => {
       gameState.setState({ portalPlacementPlayed: true });
+      // Play input-mode-specific helper only if portal placement hasn't started
+      const state = gameState.getState();
+      if (!state.portalPlacementStarted) {
+        const dialogManager = state.world?.aiManager?.dialogManager;
+        const helperId =
+          state.inputMode === "hands"
+            ? "portalPlacementHelperHands"
+            : "portalPlacementHelperControllers";
+        if (dialogManager) {
+          dialogManager.playDialog(helperId);
+        }
+      }
     },
+  },
+
+  // Portal placement helper for hand tracking mode
+  portalPlacementHelperHands: {
+    id: "portalPlacementHelperHands",
+    audio: "./audio/dialog/01a_hands_simply-point-make-a-thumbs-up.mp3",
+    captions: [
+      { text: "Simply point,", duration: 1.42 },
+      { text: "make a thumbs up,", startTime: 1.98, duration: 1.08 },
+      { text: "then tap your thumb.", startTime: 3.36, duration: 0.96 },
+    ],
+    autoPlay: false,
+    once: true,
+    priority: 89,
+  },
+
+  // Portal placement helper for controller mode
+  portalPlacementHelperControllers: {
+    id: "portalPlacementHelperControllers",
+    audio: "./audio/dialog/01a_contr_simply-point-and-pull-the-trigger.mp3",
+    captions: [{ text: "Simply point and pull the trigger.", duration: 2.66 }],
+    autoPlay: false,
+    once: true,
+    priority: 89,
   },
 
   // Ambassador presentation - plays when robots have spawned and are gathered
   ambassadorPresentation: {
     id: "ambassadorPresentation",
-    audio: "./audio/dialog/ambassador-may-i-present.mp3",
+    audio: "./audio/dialog/02_splendid-ambassador-may-i-present.mp3",
     captions: [
       { text: "Splendid!", startTime: 0.78, duration: 0.64 },
       { text: "Ambassador, may I present", startTime: 1.9, duration: 1.76 },
@@ -150,20 +186,29 @@ export const dialogTracks = {
     once: true,
     priority: 85,
     delay: 1.0,
-    playNext: "translationApp",
     onComplete: (gameState) => {
       gameState.setState({
         ambassadorPresentationPlayed: true,
         voiceInputEnabled: true,
         robotBehavior: "wandering",
       });
+      // Play input-mode-specific translation app instructions
+      const state = gameState.getState();
+      const dialogManager = state.world?.aiManager?.dialogManager;
+      const translationId =
+        state.inputMode === "hands"
+          ? "translationAppHands"
+          : "translationAppControllers";
+      if (dialogManager) {
+        dialogManager.playDialog(translationId);
+      }
     },
   },
 
-  // Translation app instructions - plays after ambassador presentation
-  translationApp: {
-    id: "translationApp",
-    audio: "./audio/dialog/a-translation-app.mp3",
+  // Translation app instructions for controllers - plays after ambassador presentation
+  translationAppControllers: {
+    id: "translationAppControllers",
+    audio: "./audio/dialog/03_contr_a-translation-app.mp3",
     captions: [
       { text: "A translation app has been", duration: 2.06 },
       { text: "uploaded to your Nanopad", startTime: 2.06, duration: 2.18 },
@@ -181,6 +226,39 @@ export const dialogTracks = {
       { text: "Try it now!", startTime: 12.98, duration: 1.14 },
       { text: "Give these explorers", startTime: 14.62, duration: 1.42 },
       { text: "a nice, friendly greeting", startTime: 16.04, duration: 1.96 },
+    ],
+    autoPlay: false,
+    once: true,
+    priority: 84,
+  },
+
+  // Translation app instructions for hand tracking - plays after ambassador presentation
+  translationAppHands: {
+    id: "translationAppHands",
+    audio: "./audio/dialog/03_hands_a-translation-app.mp3",
+    captions: [
+      {
+        text: "A translation app has been uploaded to your NanoPad.",
+        duration: 4.4,
+      },
+      {
+        text: "Do another thumb tap to stop recording.",
+        startTime: 4.88,
+        duration: 2.78,
+      },
+      {
+        text: "Tap again to stop recording and translate your speech",
+        startTime: 8.24,
+        duration: 4.28,
+      },
+      { text: "into their language.", startTime: 12.52, duration: 1.58 },
+      { text: "Try it now!", startTime: 15.0, duration: 1.04 },
+      {
+        text: "Give these explorers a nice,",
+        startTime: 16.62,
+        duration: 2.22,
+      },
+      { text: "friendly greeting.", startTime: 19.14, duration: 0.86 },
     ],
     autoPlay: false,
     once: true,
@@ -213,7 +291,7 @@ export const dialogTracks = {
   // Post-greeting instructions - robots need more readings
   moreReadings: {
     id: "moreReadings",
-    audio: "./audio/dialog/they-need-to-take-a-few-more-readings.mp3",
+    audio: "./audio/dialog/06_they-need-to-take-a-few-more-readings.mp3",
     captions: [
       { text: "They need to take a few more readings,", duration: 2.48 },
       {
@@ -317,6 +395,23 @@ export const dialogTracks = {
     autoPlay: false,
     once: false,
     priority: 50,
+  },
+
+  // Panic minigame call dialogs - quick fade-in, play, fade-out
+  panicWorkedUp: {
+    id: "panicWorkedUp",
+    audio: "./audio/dialog/oh-no-theyre-a-little-worked-up.mp3",
+    captions: [
+      { text: "Oh no! They're a little worked up.", duration: 3.24 },
+      {
+        text: "Reassure them by connecting your hand to their antennae.",
+        startTime: 3.76,
+        duration: 3.48,
+      },
+    ],
+    autoPlay: false,
+    once: true,
+    priority: 70,
   },
 };
 

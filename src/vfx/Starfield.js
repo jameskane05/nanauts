@@ -97,7 +97,7 @@ export function createStarfield(scene, options = {}) {
     speed = 50,
   } = options;
 
-  const logger = new Logger("Starfield", true);
+  const logger = new Logger("Starfield", false);
 
   const baseColor = new Color(color);
   const warmColor = new Color(0xffaa44);

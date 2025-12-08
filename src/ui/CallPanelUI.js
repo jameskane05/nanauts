@@ -163,6 +163,7 @@ export class CallPanelUI {
     } else if (state === CALL_STATE.ACTIVE) {
       this._createViseme();
       this.viseme.setAlpha(0); // Start invisible, will fade in
+      this._visemeOpacity = 0; // Reset opacity for crossfade animation
       this.thumbTap.hide(); // Hide thumbtap when call is answered
     } else if (state === CALL_STATE.HIDDEN) {
       this._stopVideo();

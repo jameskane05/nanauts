@@ -1,0 +1,19 @@
+<style>
+  .placement-panel {
+    flex-direction: column;
+    width:40px;
+    height:40px;
+    min-height:40px;
+    min-width:40px;
+    padding: 10px;
+    align-items: center;
+    background-color: rgba(8, 24, 36, 0.92);
+    border-radius: 8px;
+    border: 2px solid rgba(0, 200, 220, 0.5);
+    opacity: .3;
+  }
+
+</style>
+
+<Panel class="placement-panel">
+</Panel>

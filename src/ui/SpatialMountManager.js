@@ -31,7 +31,7 @@ export class SpatialMountManager {
   constructor(world, options = {}) {
     this.world = world;
     this.logger = new Logger("SpatialMount", options.debug ?? false);
-    this.preferHand = options.preferHand || "left";
+    this.preferHand = options.preferHand || "right";
 
     // Mount groups
     this.wristMountGroup = null;
@@ -57,7 +57,7 @@ export class SpatialMountManager {
 
     // Panel offset from wrist - different for hand tracking vs controllers
     this.panelOffsetController = new Vector3(0.05, 0.12, -0.12);
-    this.panelOffsetHand = new Vector3(0.05, 0.0, -0.12); // No Y offset for hand tracking
+    this.panelOffsetHand = new Vector3(0.05, 0.2, -0.12); // No Y offset for hand tracking
     this.panelOffset = new Vector3(0.05, 0.12, -0.12); // Current active offset
     this._lastInputMode = null; // Track input mode changes
 
@@ -582,6 +582,15 @@ export class SpatialMountManager {
 
   getXRInput() {
     return this._xrInput;
+  }
+
+  setPreferHand(hand) {
+    if (hand !== "left" && hand !== "right") return;
+    if (this.preferHand === hand) return;
+
+    this.preferHand = hand;
+    this._wristPositionInitialized = false;
+    this.logger.log(`Prefer hand changed to: ${hand}`);
   }
 
   destroy() {

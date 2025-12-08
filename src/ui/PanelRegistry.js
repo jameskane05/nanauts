@@ -39,6 +39,10 @@ export const PANEL_DEFS = {
     config: "./ui/wrist/scorePanel.json",
     mount: ATTACHMENT_MODE.SCORE,
   },
+  portalPlacement: {
+    config: "./ui/wrist/portalPlacement.json",
+    mount: ATTACHMENT_MODE.WRIST,
+  },
 };
 
 export class PanelRegistry {

@@ -64,6 +64,10 @@ export class ThumbTapRenderer {
   create(parent) {
     if (this.mesh) {
       this.mesh.visible = true;
+      // Re-parent if needed (e.g., after XR session restart)
+      if (parent && this.mesh.parent !== parent) {
+        parent.add(this.mesh);
+      }
       return;
     }
 

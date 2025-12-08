@@ -9,6 +9,7 @@
   justify-content: center;
   z-index: 1001;
   pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 #options-menu-overlay .options-panel {
@@ -30,7 +31,7 @@
 }
 
 #options-menu-overlay .title {
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 24px;
   font-weight: bold;
   color: white;
@@ -71,7 +72,7 @@
 }
 
 #options-menu-overlay .setting-label {
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 12px;
   color: rgba(0, 200, 220, 0.8);
   letter-spacing: 2px;
@@ -114,7 +115,7 @@
 }
 
 #options-menu-overlay .slider-value {
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 14px;
   color: #00d4e6;
   min-width: 45px;
@@ -154,7 +155,7 @@
 }
 
 #options-menu-overlay .checkmark::after {
-  content: '';
+  content: "";
   position: absolute;
   display: none;
   left: 10px;
@@ -170,3 +171,38 @@
   display: block;
 }
 
+#options-menu-overlay .toggle-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#options-menu-overlay .toggle-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+#options-menu-overlay .toggle-btn {
+  padding: 8px 16px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: rgba(0, 200, 220, 0.7);
+  background: rgba(0, 50, 70, 0.7);
+  border: 2px solid rgba(0, 180, 200, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#options-menu-overlay .toggle-btn:hover {
+  background: rgba(0, 70, 90, 0.85);
+  border-color: rgba(0, 200, 220, 0.7);
+}
+
+#options-menu-overlay .toggle-btn.active {
+  color: white;
+  background: rgba(0, 180, 200, 0.8);
+  border-color: #00d4e6;
+}

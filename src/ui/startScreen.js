@@ -38,6 +38,8 @@ export class StartScreen {
     this.overlay = null;
     this.keydownHandler = null;
     this.serverReady = false;
+    this.micPermissionGranted = false;
+    this.mode = "initial"; // "initial" | "paused" | "reenter"
   }
 
   async initialize() {
@@ -193,17 +195,44 @@ export class StartScreen {
     });
   }
 
-  confirmSelection() {
+  async confirmSelection() {
     const buttonId = this.buttons[this.selectedIndex];
     if (buttonId === "start-button") {
-      this.handleStart();
+      await this.handleStart();
     } else if (buttonId === "options-button") {
       this.handleOptions();
     }
   }
 
-  handleStart() {
+  async handleStart() {
     this.logger.log("START clicked");
+
+    const startBtn = document.getElementById("start-button");
+    const originalText = startBtn?.textContent || "START";
+
+    // Request microphone permission before entering XR (better UX than prompting in VR)
+    if (!this.micPermissionGranted) {
+      this.setStartButtonEnabled(false);
+      if (startBtn) startBtn.textContent = "REQUESTING MIC...";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        stream.getTracks().forEach((track) => track.stop());
+        this.micPermissionGranted = true;
+        this.logger.log("Microphone permission granted");
+      } catch (error) {
+        this.logger.warn("Microphone permission denied:", error);
+        if (startBtn) startBtn.textContent = "MIC DENIED - TAP TO RETRY";
+        this.setStartButtonEnabled(true);
+        return;
+      }
+    }
+
+    // Restore button text before hiding (in case of quick show/hide)
+    if (startBtn) startBtn.textContent = originalText;
+
     gameState.setState({ currentState: GAME_STATES.ENTERING_XR });
     this.hide();
     if (this.onStart) {
@@ -227,14 +256,67 @@ export class StartScreen {
     }
   }
 
+  /**
+   * Set the display mode for the start screen
+   * @param {string} mode - "initial" | "paused" | "reenter"
+   */
+  setMode(mode) {
+    this.mode = mode;
+    this.logger.log(`Mode set to: ${mode}`);
+  }
+
+  /**
+   * Apply the current mode to button visibility and text
+   */
+  _applyMode() {
+    const startBtn = document.getElementById("start-button");
+    const optionsBtn = document.getElementById("options-button");
+
+    if (!startBtn || !optionsBtn) return;
+
+    switch (this.mode) {
+      case "paused":
+        // XR paused (visible-blurred) - only show OPTIONS
+        startBtn.style.display = "none";
+        optionsBtn.style.display = "block";
+        this.buttons = ["options-button"];
+        this.selectedIndex = 0;
+        break;
+
+      case "reenter":
+        // XR session ended - show RE-ENTER + OPTIONS
+        startBtn.style.display = "block";
+        startBtn.textContent = "RE-ENTER";
+        optionsBtn.style.display = "block";
+        this.buttons = ["start-button", "options-button"];
+        this.selectedIndex = 0;
+        this.setStartButtonEnabled(true);
+        break;
+
+      case "initial":
+      default:
+        // Initial state - show START + OPTIONS
+        startBtn.style.display = "block";
+        startBtn.textContent = "START";
+        optionsBtn.style.display = "block";
+        this.buttons = ["start-button", "options-button"];
+        this.selectedIndex = 0;
+        this.setStartButtonEnabled(true);
+        break;
+    }
+
+    this.updateSelectionVisual();
+  }
+
   show() {
     if (this.overlay) {
+      this._applyMode();
       this.overlay.style.display = "flex";
       this.isVisible = true;
       // Focus overlay to enable keyboard navigation (important for embedded browsers)
       setTimeout(() => {
         this.overlay.focus();
-        this.logger.log("Shown and focused");
+        this.logger.log(`Shown in ${this.mode} mode`);
       }, 100);
     }
   }

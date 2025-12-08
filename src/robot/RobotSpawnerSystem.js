@@ -55,7 +55,11 @@ import {
   PointsMaterial,
   TextureLoader,
   Color,
+  Line,
+  LineBasicMaterial,
+  CanvasTexture,
 } from "three";
+import { ThumbTapRenderer } from "../ui/ThumbTapRenderer.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Logger } from "../utils/Logger.js";
 import { gameState, GAME_STATES } from "../gameState.js";
@@ -65,10 +69,11 @@ import {
   getCharacterByIndex,
 } from "../data/robotCharacters.js";
 import { PortalAudio } from "../audio/PortalAudio.js";
+import { ATTACHMENT_MODE } from "../ui/SpatialMountManager.js";
 
 export class RobotSpawnerSystem extends createSystem({}) {
   init() {
-    this.logger = new Logger("RobotSpawner", false);
+    this.logger = new Logger("RobotSpawner", true);
     this.world.robotSpawnerSystem = this;
 
     this.enabled = false;
@@ -109,6 +114,30 @@ export class RobotSpawnerSystem extends createSystem({}) {
     // Placement sound audio (separate from entrance audio)
     this._placementAudio = new PortalAudio();
 
+    // Portal placement VFX (attached to panel managed by SpatialUIManager)
+    this._vfxAttached = false;
+    this._placementPanelVisible = false;
+    this._inputMode = "controllers";
+    this._thumbTap = new ThumbTapRenderer({
+      size: 0.1,
+      renderOrder: 9020,
+      position: { x: 0, y: 0, z: 0.02 },
+    });
+
+    // Panel fade animation (like CallPanelUI)
+    this._fadeProgress = 0;
+    this._fadeTarget = 0;
+    this._fadeDuration = 1.0; // 1 second fade in/out
+
+    // Placement line VFX (from hand to hit point)
+    this._placementLine = null;
+    this._placementLineParticles = null;
+    this._lineValidColor = new Color(0x00ff88);
+    this._lineInvalidColor = new Color(0xff4444);
+    this._lineDisabledColor = new Color(0x888888); // Grey when no hit pose
+    this._lineParticleTexture = null;
+    this._lineTime = 0;
+
     // Listen for intro completion to enable spawning
     this._setupGameStateListener();
 
@@ -135,7 +164,7 @@ export class RobotSpawnerSystem extends createSystem({}) {
       ) {
         if (newState.roomSetupRequired === false) {
           this.logger.log(
-            "PORTAL_PLACEMENT state + room ready - robot spawning enabled"
+            `PORTAL_PLACEMENT state entered, roomSetupRequired=false - enabling spawner`
           );
           this.enabled = true;
           if (this.world.hitTestManager) {
@@ -143,7 +172,7 @@ export class RobotSpawnerSystem extends createSystem({}) {
           }
         } else {
           this.logger.log(
-            `PORTAL_PLACEMENT state but room setup=${newState.roomSetupRequired} - spawning deferred`
+            `PORTAL_PLACEMENT state but room setup=${newState.roomSetupRequired} - spawner deferred`
           );
         }
       }
@@ -187,7 +216,21 @@ export class RobotSpawnerSystem extends createSystem({}) {
           this.portalPreviewPose = null;
         }
       }
+
+      // Handle input mode changes (hands vs controllers)
+      if (newState.inputMode !== oldState.inputMode) {
+        this._inputMode = newState.inputMode;
+        this._updatePlacementInputMode();
+      }
+
+      // Clean up placement VFX when portal spawning begins
+      if (newState.robotsActive && !oldState.robotsActive) {
+        this._cleanupPlacementVFX();
+      }
     });
+
+    // Sync initial input mode
+    this._inputMode = gameState.getState().inputMode || "controllers";
 
     // Check initial state in case we debug spawned past intro
     const currentState = gameState.getState();
@@ -204,6 +247,405 @@ export class RobotSpawnerSystem extends createSystem({}) {
       );
       this.enabled = true;
     }
+  }
+
+  // Attach VFX elements (thumbtap, line) to the portal placement panel managed by SpatialUIManager
+  _attachPlacementVFX() {
+    const wristUI = this.world.aiManager?.wristUI;
+    if (!wristUI) return false;
+
+    const registry = wristUI.registry;
+    const panel = registry?.getPanel("portalPlacement");
+    if (!panel?.group) return false;
+
+    // Add thumbtap renderer if not already added
+    if (!this._vfxAttached) {
+      this._thumbTap.create(panel.group);
+      this._createPlacementLineVFX();
+      this._vfxAttached = true;
+      this._placementPanelVisible = true;
+      this._fadeTarget = 1;
+      this._fadeProgress = 0;
+      this._updatePlacementInputMode();
+      this.logger.log("Placement VFX attached to panel");
+    }
+
+    return true;
+  }
+
+  _cleanupPlacementVFX() {
+    if (!this._vfxAttached) return;
+
+    this._thumbTap.hide();
+    this._disposePlacementLineVFX();
+    this._vfxAttached = false;
+    this._placementPanelVisible = false;
+    this._fadeProgress = 0;
+
+    this.logger.log("Placement VFX cleaned up");
+  }
+
+  _updatePlacementFade(dt) {
+    const wristUI = this.world.aiManager?.wristUI;
+    if (!wristUI) return;
+
+    const panel = wristUI.registry.getPanel("portalPlacement");
+    if (!panel?.group) return;
+
+    // Always update thumbtap visibility based on current state (not just during animation)
+    if (this._thumbTap.mesh) {
+      if (this._thumbTap.mesh.material) {
+        this._thumbTap.mesh.material.opacity = this._fadeProgress;
+      }
+      // Show in hands mode when panel is visible
+      if (this._fadeProgress > 0.01 && this._inputMode === "hands") {
+        this._thumbTap.mesh.visible = true;
+      } else {
+        this._thumbTap.mesh.visible = false;
+      }
+    }
+
+    // Skip if already at target
+    if (Math.abs(this._fadeProgress - this._fadeTarget) < 0.001) {
+      this._fadeProgress = this._fadeTarget;
+      return;
+    }
+
+    // Lerp toward target
+    const speed = 1 / this._fadeDuration;
+    if (this._fadeProgress < this._fadeTarget) {
+      this._fadeProgress = Math.min(
+        this._fadeTarget,
+        this._fadeProgress + speed * dt
+      );
+      panel.group.visible = true;
+    } else {
+      this._fadeProgress = Math.max(
+        this._fadeTarget,
+        this._fadeProgress - speed * dt
+      );
+    }
+
+    // Apply opacity to panel materials
+    this._applyOpacityToGroup(panel.group, this._fadeProgress);
+  }
+
+  _applyOpacityToGroup(group, opacity) {
+    group.traverse((child) => {
+      if (child.material) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        for (const mat of materials) {
+          if (mat.opacity !== undefined) {
+            mat.transparent = true;
+            mat.opacity = opacity;
+            mat.needsUpdate = true;
+          }
+        }
+      }
+    });
+  }
+
+  _updatePlacementInputMode() {
+    const wristUI = this.world.aiManager?.wristUI;
+    if (!wristUI || !this._placementPanelVisible) return;
+
+    const doc = wristUI.registry.getDocument("portalPlacement");
+    if (!doc) return;
+
+    const hintText = doc.getElementById("hint-text");
+    const thumbtapArea = doc.getElementById("thumbtap-area");
+
+    if (this._inputMode === "hands") {
+      if (hintText) hintText.setProperties({ value: "THUMBTAP TO PLACE" });
+      if (thumbtapArea) thumbtapArea.setProperties({ display: "flex" });
+      // Thumbtap visibility handled by _updatePlacementFade based on fade progress
+    } else {
+      if (hintText) hintText.setProperties({ value: "TRIGGER TO PLACE" });
+      if (thumbtapArea) thumbtapArea.setProperties({ display: "none" });
+      // Hide thumbtap in controller mode
+      if (this._thumbTap.mesh) {
+        this._thumbTap.mesh.visible = false;
+      }
+    }
+  }
+
+  _createPlacementLineVFX() {
+    if (this._placementLine) return;
+
+    // Create particle texture for line particles
+    if (!this._lineParticleTexture) {
+      const size = 32;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      const gradient = ctx.createRadialGradient(
+        size / 2,
+        size / 2,
+        0,
+        size / 2,
+        size / 2,
+        size / 2
+      );
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.3, "rgba(255,255,255,0.8)");
+      gradient.addColorStop(0.7, "rgba(255,255,255,0.3)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      this._lineParticleTexture = new CanvasTexture(canvas);
+    }
+
+    // Create line geometry (2 points - start and end)
+    const lineGeo = new BufferGeometry();
+    const positions = new Float32Array(6); // 2 vertices * 3 coords
+    lineGeo.setAttribute("position", new Float32BufferAttribute(positions, 3));
+
+    const lineMat = new LineBasicMaterial({
+      color: this._lineValidColor,
+      transparent: true,
+      opacity: 0.8,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    this._placementLine = new Line(lineGeo, lineMat);
+    this._placementLine.renderOrder = 500;
+    this._placementLine.visible = false;
+    this.world.scene.add(this._placementLine);
+
+    // Create particles along the line
+    const particleCount = 12;
+    const particleGeo = new BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleColors = new Float32Array(particleCount * 3);
+
+    particleGeo.setAttribute(
+      "position",
+      new Float32BufferAttribute(particlePositions, 3)
+    );
+    particleGeo.setAttribute(
+      "color",
+      new Float32BufferAttribute(particleColors, 3)
+    );
+
+    const particleMat = new PointsMaterial({
+      size: 0.015,
+      map: this._lineParticleTexture,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+      sizeAttenuation: true,
+    });
+
+    this._placementLineParticles = new Points(particleGeo, particleMat);
+    this._placementLineParticles.renderOrder = 501;
+    this._placementLineParticles.visible = false;
+    this.world.scene.add(this._placementLineParticles);
+
+    this.logger.log("Placement line VFX created");
+  }
+
+  _disposePlacementLineVFX() {
+    if (this._placementLine) {
+      this._placementLine.geometry?.dispose();
+      this._placementLine.material?.dispose();
+      if (this._placementLine.parent) {
+        this._placementLine.parent.remove(this._placementLine);
+      }
+      this._placementLine = null;
+    }
+
+    if (this._placementLineParticles) {
+      this._placementLineParticles.geometry?.dispose();
+      this._placementLineParticles.material?.dispose();
+      if (this._placementLineParticles.parent) {
+        this._placementLineParticles.parent.remove(
+          this._placementLineParticles
+        );
+      }
+      this._placementLineParticles = null;
+    }
+  }
+
+  _updatePlacementLineVFX(delta) {
+    const hitTestManager = this.world.hitTestManager;
+    if (
+      !hitTestManager ||
+      !this._placementLine ||
+      !this._placementPanelVisible
+    ) {
+      if (this._placementLine) this._placementLine.visible = false;
+      if (this._placementLineParticles)
+        this._placementLineParticles.visible = false;
+      return;
+    }
+
+    const activeHand = hitTestManager.activeHand;
+    const hitPose =
+      hitTestManager.lastHitPose?.right || hitTestManager.lastHitPose?.left;
+
+    // Get controller/hand position - try multiple sources
+    const xrInput = this.world.xrInputManager?.xrInput;
+    let startPos = null;
+    let rayDirection = null;
+
+    // Priority: raySpaces > gamepads.grip > targetRaySpace from session
+    // Use actual activeHand if valid, otherwise use handedness preference from settings
+    const preferredHand = gameState.getState().handedness || "right";
+    const fallbackHand = preferredHand === "right" ? "left" : "right";
+    const handsToTry =
+      activeHand && activeHand !== "none"
+        ? [activeHand, preferredHand, fallbackHand]
+        : [preferredHand, fallbackHand];
+
+    for (const hand of handsToTry) {
+      if (startPos) break;
+
+      // Try raySpaces
+      if (xrInput?.xrOrigin?.raySpaces?.[hand]) {
+        const raySpace = xrInput.xrOrigin.raySpaces[hand];
+        startPos = new Vector3();
+        raySpace.getWorldPosition(startPos);
+        // Get ray direction from raySpace
+        rayDirection = new Vector3(0, 0, -1);
+        rayDirection.applyQuaternion(raySpace.quaternion);
+        break;
+      }
+
+      // Try gamepad grip
+      if (xrInput?.gamepads?.[hand]?.grip) {
+        const grip = xrInput.gamepads[hand].grip;
+        startPos = new Vector3();
+        grip.getWorldPosition(startPos);
+        rayDirection = new Vector3(0, 0, -1);
+        rayDirection.applyQuaternion(grip.quaternion);
+        break;
+      }
+    }
+
+    // Last resort: try to get controller position from XR session directly
+    if (!startPos) {
+      const session = this.world.renderer?.xr?.getSession?.();
+      const refSpace = this.world.renderer?.xr?.getReferenceSpace?.();
+      const frame = this.world.renderer?.xr?.getFrame?.();
+      if (session?.inputSources && refSpace && frame) {
+        for (const source of session.inputSources) {
+          if (
+            source.targetRayMode === "tracked-pointer" &&
+            source.targetRaySpace
+          ) {
+            try {
+              const pose = frame.getPose(source.targetRaySpace, refSpace);
+              if (pose) {
+                startPos = new Vector3(
+                  pose.transform.position.x,
+                  pose.transform.position.y,
+                  pose.transform.position.z
+                );
+                // Extract direction from pose orientation
+                const q = pose.transform.orientation;
+                rayDirection = new Vector3(0, 0, -1);
+                rayDirection.applyQuaternion(
+                  new Quaternion(q.x, q.y, q.z, q.w)
+                );
+                break;
+              }
+            } catch (e) {
+              // Ignore pose errors
+            }
+          }
+        }
+      }
+    }
+
+    if (!startPos) {
+      this._placementLine.visible = false;
+      this._placementLineParticles.visible = false;
+      return;
+    }
+
+    // Get hit position from pose, or project forward if no hit
+    let hitPos;
+    let hasValidHit = false;
+    if (hitPose) {
+      const hitMatrix = new Matrix4().fromArray(hitPose.transform.matrix);
+      hitPos = new Vector3();
+      hitMatrix.decompose(hitPos, new Quaternion(), new Vector3());
+      hasValidHit = true;
+    } else if (rayDirection) {
+      // No hit - project forward to show disabled state (grey line)
+      hitPos = startPos.clone().add(rayDirection.multiplyScalar(3.0));
+      hasValidHit = false;
+    } else {
+      this._placementLine.visible = false;
+      this._placementLineParticles.visible = false;
+      return;
+    }
+
+    // Update line positions
+    const linePositions =
+      this._placementLine.geometry.attributes.position.array;
+    linePositions[0] = startPos.x;
+    linePositions[1] = startPos.y;
+    linePositions[2] = startPos.z;
+    linePositions[3] = hitPos.x;
+    linePositions[4] = hitPos.y;
+    linePositions[5] = hitPos.z;
+    this._placementLine.geometry.attributes.position.needsUpdate = true;
+
+    // Update line color based on hit state and surface validity
+    // Green = valid placement, Grey = invalid/disabled (no red)
+    const lineColor =
+      hasValidHit && hitTestManager._surfaceValid
+        ? this._lineValidColor
+        : this._lineDisabledColor;
+    this._placementLine.material.color.copy(lineColor);
+
+    // Apply fade opacity to line
+    this._placementLine.material.opacity = 0.8 * this._fadeProgress;
+    this._placementLine.visible = this._fadeProgress > 0.01;
+
+    // Update particles along the line
+    this._lineTime += delta;
+    const particlePositions =
+      this._placementLineParticles.geometry.attributes.position.array;
+    const particleColors =
+      this._placementLineParticles.geometry.attributes.color.array;
+    const particleCount = particlePositions.length / 3;
+
+    for (let i = 0; i < particleCount; i++) {
+      // Animate particles along line with offset
+      let t = (i / particleCount + this._lineTime * 0.8) % 1.0;
+
+      // Lerp between start and end
+      const x = startPos.x + (hitPos.x - startPos.x) * t;
+      const y = startPos.y + (hitPos.y - startPos.y) * t;
+      const z = startPos.z + (hitPos.z - startPos.z) * t;
+
+      particlePositions[i * 3] = x;
+      particlePositions[i * 3 + 1] = y;
+      particlePositions[i * 3 + 2] = z;
+
+      // Color particles
+      particleColors[i * 3] = lineColor.r;
+      particleColors[i * 3 + 1] = lineColor.g;
+      particleColors[i * 3 + 2] = lineColor.b;
+    }
+
+    this._placementLineParticles.geometry.attributes.position.needsUpdate = true;
+    this._placementLineParticles.geometry.attributes.color.needsUpdate = true;
+
+    // Apply fade opacity to particles
+    this._placementLineParticles.material.opacity = 0.9 * this._fadeProgress;
+    this._placementLineParticles.visible = this._fadeProgress > 0.01;
   }
 
   async _preloadRobotModels() {
@@ -230,6 +672,12 @@ export class RobotSpawnerSystem extends createSystem({}) {
   }
 
   spawnPortalAndRobots(pose) {
+    // Set flag immediately so dialogs know placement was triggered
+    gameState.setState({ portalPlacementStarted: true });
+
+    // Clean up placement VFX when portal spawns
+    this._cleanupPlacementVFX();
+
     const matrix = new Matrix4().fromArray(pose.transform.matrix);
     const position = new Vector3();
     const quaternion = new Quaternion();
@@ -908,6 +1356,38 @@ export class RobotSpawnerSystem extends createSystem({}) {
 
           this.spawnPortalAndRobots(fakePose);
         }
+      }
+    }
+
+    // Check if portal placement panel is visible (managed by SpatialUIManager) and attach VFX
+    const wristUI = this.world.aiManager?.wristUI;
+    const placementPanel = wristUI?.registry?.getPanel("portalPlacement");
+    const panelVisible = placementPanel?.group?.visible;
+
+    if (panelVisible && !this._vfxAttached) {
+      this._attachPlacementVFX();
+    } else if (!panelVisible && this._vfxAttached) {
+      this._cleanupPlacementVFX();
+    }
+
+    // Update placement VFX (runs when VFX is attached)
+    if (this._vfxAttached) {
+      this._updatePlacementFade(delta);
+      this._thumbTap.update();
+      // Only update line VFX when hit testing is enabled
+      if (this.enabled) {
+        this._updatePlacementLineVFX(delta);
+      }
+
+      // Debug: log fade progress periodically
+      if (!this._lastFadeLog || now - this._lastFadeLog > 1000) {
+        this._lastFadeLog = now;
+        this.logger.log(
+          `Placement UI: fadeProgress=${this._fadeProgress.toFixed(2)}, ` +
+            `fadeTarget=${this._fadeTarget}, visible=${this._placementPanelVisible}, ` +
+            `line=${!!this._placementLine?.visible}, particles=${!!this
+              ._placementLineParticles?.visible}`
+        );
       }
     }
 

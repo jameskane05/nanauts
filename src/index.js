@@ -55,8 +55,6 @@ import {
 } from "@iwsdk/core";
 import * as horizonKit from "@pmndrs/uikit-horizon";
 import { MicIcon } from "@pmndrs/uikit-lucide";
-import Stats from "three/examples/jsm/libs/stats.module.js";
-
 // Game state and platform detection
 import { GAME_STATES, gameState } from "./gameState.js";
 import {
@@ -74,7 +72,6 @@ import { OptionsMenu } from "./ui/OptionsMenu.js";
 import { BrowserStateSystem } from "./systems/BrowserStateSystem.js";
 import { AudioSystem } from "./systems/AudioSystem.js";
 import { AudioAmplitudeSystem } from "./systems/AudioAmplitudeSystem.js";
-import { StatsSystem } from "./utils/StatsSystem.js";
 import { AnimatedUISystem } from "./systems/AnimatedUISystem.js";
 import { SemanticLabelsSystem } from "./utils/SemanticEnvironmentLabels.js";
 import { AIManager, AIManagerConfig } from "./ai/AIManager.js";
@@ -106,6 +103,9 @@ const logger = new Logger("App", true);
 // Check URL params for debug options
 const urlParams = new URLSearchParams(window.location.search);
 const enableSemanticLabels = urlParams.get("semanticLabels") === "true";
+const isLocalhost =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
 
 AIManagerConfig.enableVoicePanel = true;
 AIManagerConfig.enableDebugVisualizer = enableSemanticLabels; // Off by default, enable with ?semanticLabels=true
@@ -211,7 +211,7 @@ World.create(document.getElementById("scene-container"), {
     // Create starfield background for pre-XR screen (Star Wars crawl style)
     const starfield = createStarfield(world.scene);
 
-    // Animate starfield until XR starts
+    // Animate starfield - runs when starfieldActive is true
     let starfieldActive = true;
     let lastStarfieldTime = performance.now();
     function animateStarfield() {
@@ -224,16 +224,60 @@ World.create(document.getElementById("scene-container"), {
     }
     animateStarfield();
 
-    // Hide starfield when entering XR
-    gameState.on("state:changed", (newState) => {
-      if (newState.currentState === GAME_STATES.ENTERING_XR) {
+    // Helper to enable/disable starfield
+    function setStarfieldEnabled(enabled) {
+      if (enabled && !starfieldActive) {
+        starfieldActive = true;
+        starfield.setVisible(true);
+        lastStarfieldTime = performance.now();
+        animateStarfield();
+        // Re-add dark space gradient
+        if (levelRoot && !levelRoot.hasComponent(DomeGradient)) {
+          levelRoot.addComponent(DomeGradient, {
+            sky: [0.008, 0.012, 0.03, 1.0],
+            equator: [0.02, 0.02, 0.04, 1.0],
+            ground: [0.005, 0.005, 0.01, 1.0],
+            intensity: 1.0,
+          });
+        }
+        logger.log("Starfield enabled");
+      } else if (!enabled && starfieldActive) {
         starfieldActive = false;
-        starfield.dispose();
+        starfield.setVisible(false);
         // Remove dark space gradient for AR/MR passthrough
         if (levelRoot && levelRoot.hasComponent(DomeGradient)) {
           levelRoot.removeComponent(DomeGradient);
         }
-        logger.log("Starfield disposed for XR entry");
+        logger.log("Starfield disabled");
+      }
+    }
+
+    // Handle starfield visibility based on game state
+    gameState.on("state:changed", (newState, oldState) => {
+      // Disable starfield when entering XR
+      if (newState.currentState === GAME_STATES.ENTERING_XR) {
+        setStarfieldEnabled(false);
+      }
+      // Re-enable starfield when XR paused (visible-blurred = system UI showing)
+      else if (
+        newState.currentState === GAME_STATES.XR_PAUSED &&
+        newState.xrPauseReason === "blurred"
+      ) {
+        setStarfieldEnabled(true);
+      }
+      // Re-enable starfield when returning to start screen (XR session ended)
+      else if (
+        newState.currentState === GAME_STATES.START_SCREEN &&
+        oldState.currentState !== GAME_STATES.LOADING
+      ) {
+        setStarfieldEnabled(true);
+      }
+      // Disable starfield when resuming from pause
+      else if (
+        oldState.currentState === GAME_STATES.XR_PAUSED &&
+        newState.currentState >= GAME_STATES.XR_ACTIVE
+      ) {
+        setStarfieldEnabled(false);
       }
     });
 
@@ -269,7 +313,6 @@ World.create(document.getElementById("scene-container"), {
       .registerSystem(BrowserStateSystem) // Syncs IWSDK visibilityState to gameState
       .registerSystem(AudioSystem) // Criteria-based audio playback
       .registerSystem(AudioAmplitudeSystem) // Audio amplitude analysis for haptics/visuals
-      .registerSystem(StatsSystem) // FPS monitor
       .registerSystem(AnimatedUISystem); // Ambient UI animations
 
     // Conditionally register SemanticLabelsSystem based on URL param
@@ -339,6 +382,12 @@ World.create(document.getElementById("scene-container"), {
           });
         }
 
+        // Enable hitTestManager if spawner is already enabled (handles race condition
+        // where spawner's state listener fires before hitTestManager is created)
+        if (robotSpawner.enabled) {
+          world.hitTestManager.setEnabled(true);
+        }
+
         robotSpawnerConnected = true;
         logger.log("Robot spawner connected to HitTestManager");
       }
@@ -379,11 +428,12 @@ World.create(document.getElementById("scene-container"), {
     // Step 6: Set up Start Screen handler (BEFORE completing loading)
     // ============================================================================
 
+    // Keep references to start screen and options menu
+    let startScreen = null;
+    let optionsMenu = null;
+
     const initializeStartScreen = async () => {
       logger.log("Initializing start screen and options menu...");
-
-      let startScreen = null;
-      let optionsMenu = null;
 
       // Create options menu (hidden by default)
       optionsMenu = new OptionsMenu({
@@ -412,18 +462,50 @@ World.create(document.getElementById("scene-container"), {
       window.optionsMenu = optionsMenu;
     };
 
-    // Listen for state change to START_SCREEN
-    const onStateChanged = async (newState, oldState) => {
+    // Listen for state changes to show/hide start screen
+    let startScreenInitialized = false;
+    gameState.on("state:changed", async (newState, oldState) => {
+      // Initialize start screen on first transition to START_SCREEN
       if (
         newState.currentState === GAME_STATES.START_SCREEN &&
-        oldState.currentState !== GAME_STATES.START_SCREEN
+        !startScreenInitialized
       ) {
-        gameState.off("state:changed", onStateChanged);
+        startScreenInitialized = true;
         await initializeStartScreen();
+        return;
       }
-    };
 
-    gameState.on("state:changed", onStateChanged);
+      // Show start screen when XR paused (visible-blurred = system UI)
+      if (
+        newState.currentState === GAME_STATES.XR_PAUSED &&
+        newState.xrPauseReason === "blurred" &&
+        startScreen
+      ) {
+        startScreen.setMode("paused");
+        startScreen.show();
+      }
+
+      // Show start screen when returning from XR (session ended)
+      // Only show if currentState actually changed TO START_SCREEN (not just any state update)
+      if (
+        newState.currentState === GAME_STATES.START_SCREEN &&
+        oldState.currentState !== GAME_STATES.START_SCREEN &&
+        oldState.currentState !== GAME_STATES.LOADING &&
+        startScreen
+      ) {
+        startScreen.setMode("reenter");
+        startScreen.show();
+      }
+
+      // Hide start screen when resuming XR from pause
+      if (
+        oldState.currentState === GAME_STATES.XR_PAUSED &&
+        newState.currentState >= GAME_STATES.XR_ACTIVE &&
+        startScreen
+      ) {
+        startScreen.hide();
+      }
+    });
 
     // Complete systems loading task - this will trigger state change to START_SCREEN
     loadingScreen.completeTask("systems");
@@ -432,16 +514,25 @@ World.create(document.getElementById("scene-container"), {
     window.world = world;
 
     // ============================================================================
-    // Performance Stats (FPS monitor)
+    // Performance Stats (FPS monitor) - localhost only
     // ============================================================================
 
-    const stats = new Stats();
-    stats.showPanel(0); // 0: FPS, 1: MS per frame, 2: MB memory
-    stats.dom.style.cssText = "position:fixed;top:0;left:0;z-index:10000;";
-    document.body.appendChild(stats.dom);
+    if (isLocalhost) {
+      import("three/examples/jsm/libs/stats.module.js").then(
+        ({ default: Stats }) => {
+          import("./utils/StatsSystem.js").then(({ StatsSystem }) => {
+            world.registerSystem(StatsSystem);
+          });
 
-    // Store stats globally so StatsSystem can access it
-    window.stats = stats;
+          const stats = new Stats();
+          stats.showPanel(0); // 0: FPS, 1: MS per frame, 2: MB memory
+          stats.dom.style.cssText =
+            "position:fixed;top:0;left:0;z-index:10000;";
+          document.body.appendChild(stats.dom);
+          window.stats = stats;
+        }
+      );
+    }
   })
   .catch((error) => {
     logger.error("Failed to create World:", error);

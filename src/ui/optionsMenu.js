@@ -41,6 +41,7 @@ export class OptionsMenu {
       musicVolume: 80,
       sfxVolume: 80,
       captionsEnabled: true,
+      handedness: "right",
     };
 
     this.loadSettings();
@@ -89,6 +90,14 @@ export class OptionsMenu {
               <span class="checkmark"></span>
             </label>
           </div>
+
+          <div class="setting-row toggle-row">
+            <label class="setting-label">HANDEDNESS</label>
+            <div class="toggle-buttons">
+              <button id="hand-left" class="toggle-btn">LEFT</button>
+              <button id="hand-right" class="toggle-btn active">RIGHT</button>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -97,6 +106,11 @@ export class OptionsMenu {
   }
 
   setupInteractions() {
+    // Stop all click events from bubbling through to UI behind the overlay
+    this.overlay.addEventListener("click", (e) => e.stopPropagation());
+    this.overlay.addEventListener("pointerdown", (e) => e.stopPropagation());
+    this.overlay.addEventListener("pointerup", (e) => e.stopPropagation());
+
     const closeBtn = document.getElementById("close-button");
     const musicSlider = document.getElementById("music-slider");
     const sfxSlider = document.getElementById("sfx-slider");
@@ -131,6 +145,27 @@ export class OptionsMenu {
         this.saveSettings();
       });
     }
+
+    const handLeftBtn = document.getElementById("hand-left");
+    const handRightBtn = document.getElementById("hand-right");
+
+    if (handLeftBtn) {
+      handLeftBtn.addEventListener("click", () => {
+        this.settings.handedness = "left";
+        this.updateUI();
+        this.applySettings();
+        this.saveSettings();
+      });
+    }
+
+    if (handRightBtn) {
+      handRightBtn.addEventListener("click", () => {
+        this.settings.handedness = "right";
+        this.updateUI();
+        this.applySettings();
+        this.saveSettings();
+      });
+    }
   }
 
   setupKeyboardNavigation() {
@@ -158,6 +193,19 @@ export class OptionsMenu {
     if (sfxValue) sfxValue.textContent = `${this.settings.sfxVolume}%`;
     if (captionsCheckbox)
       captionsCheckbox.checked = this.settings.captionsEnabled;
+
+    const handLeftBtn = document.getElementById("hand-left");
+    const handRightBtn = document.getElementById("hand-right");
+    if (handLeftBtn && handRightBtn) {
+      handLeftBtn.classList.toggle(
+        "active",
+        this.settings.handedness === "left"
+      );
+      handRightBtn.classList.toggle(
+        "active",
+        this.settings.handedness === "right"
+      );
+    }
   }
 
   applySettings() {
@@ -165,6 +213,7 @@ export class OptionsMenu {
       musicVolume: this.settings.musicVolume / 100,
       sfxVolume: this.settings.sfxVolume / 100,
       captionsEnabled: this.settings.captionsEnabled,
+      handedness: this.settings.handedness,
     });
   }
 

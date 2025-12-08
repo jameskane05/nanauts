@@ -63,6 +63,8 @@ export class GameState {
 
       // XR session state
       isXRActive: false,
+      hasEnteredXR: false, // True once user has entered XR at least once (for "RE-ENTER" vs "START")
+      xrPauseReason: null, // "blurred" (system UI) or "hidden" (headset off) or null
       visibilityState: "non-immersive", // IWSDK values: 'non-immersive'|'visible'|'hidden'|'visible-blurred'
       stateBeforePause: null, // Stores state before XR pause for resume
 
@@ -77,6 +79,7 @@ export class GameState {
       // UI state management (used by UIStateManager)
       roomSetupRequired: null, // null = unknown, true = need room capture, false = room ready
       roomCaptureFailed: false, // True if room capture was attempted but failed (can only try once)
+      callRingPlayed: false, // True after incoming call ring has played (prevents re-ring on XR re-entry)
       callAnswered: false, // True after user answers incoming call
       introPlayed: false, // True after intro sequence completes
       portalPlacementPlayed: false, // True after portal placement dialog completes
@@ -99,6 +102,9 @@ export class GameState {
 
       // Input mode tracking (controllers vs hand tracking)
       inputMode: "controllers", // "controllers" | "hands" - determines UI prompts
+
+      // Handedness preference (which wrist to mount UI on)
+      handedness: "right", // "left" | "right" - determines wrist UI placement
 
       // Portal spawn location (used as goal destination)
       portalSpawnPosition: null, // {x, y, z} of initial portal

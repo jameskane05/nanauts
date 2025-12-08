@@ -237,10 +237,11 @@ export class AIManager extends createSystem({
         // Create UIStateManager first - it will control UI visibility
         this.uiStateManager = new UIStateManager(this.world, { debug: true });
 
-        // Create SpatialUIManager - prefer right hand
+        // Create SpatialUIManager - use handedness from gameState (defaults to right)
+        const currentHandedness = gameState.getState().handedness || "right";
         this.wristUI = new SpatialUIManager(this.world, {
           debug: true,
-          preferHand: "right",
+          preferHand: currentHandedness,
           onCallAnswered: () => {
             this.logger.log("Call answered - transitioning to PLAYING");
             gameState.setState({

@@ -29,6 +29,7 @@ export const WRIST_UI_STATE = {
   HIDDEN: "hidden",
   INCOMING_CALL: "incoming_call",
   ACTIVE_CALL: "active_call",
+  PORTAL_PLACEMENT: "portal_placement",
   VOICE_INPUT: "voice_input",
 };
 
@@ -40,6 +41,7 @@ const STATE_PANELS = {
   [WRIST_UI_STATE.HIDDEN]: [],
   [WRIST_UI_STATE.INCOMING_CALL]: ["call"],
   [WRIST_UI_STATE.ACTIVE_CALL]: ["call"],
+  [WRIST_UI_STATE.PORTAL_PLACEMENT]: ["call", "portalPlacement"],
   [WRIST_UI_STATE.VOICE_INPUT]: ["call", "voice"],
 };
 
@@ -110,6 +112,14 @@ export class SpatialUIManager {
         );
         this._updateInputModeUI(newState.inputMode);
       }
+
+      // Handle handedness changes (which wrist the UI appears on)
+      if (newState.handedness !== oldState.handedness) {
+        this.logger.log(
+          `Handedness changed: ${oldState.handedness} -> ${newState.handedness}`
+        );
+        this.mountManager.setPreferHand(newState.handedness);
+      }
     });
   }
 
@@ -175,7 +185,11 @@ export class SpatialUIManager {
     this.currentState = newState;
 
     if (newState === WRIST_UI_STATE.INCOMING_CALL) {
-      uiAudio.callRing();
+      // Only play ring if it hasn't been played yet (prevents re-ring on XR re-entry)
+      if (!gameState.getState().callRingPlayed) {
+        uiAudio.callRing();
+        gameState.setState({ callRingPlayed: true });
+      }
     } else if (newState === WRIST_UI_STATE.VOICE_INPUT) {
       uiAudio.voiceStart();
     } else if (

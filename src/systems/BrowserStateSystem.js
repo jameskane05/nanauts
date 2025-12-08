@@ -62,9 +62,12 @@ export class BrowserStateSystem extends createSystem({}, {}) {
     if (visState === "visible") {
       // XR session is active and visible
       this.handleXRVisible(current);
-    } else if (visState === "hidden" || visState === "visible-blurred") {
-      // XR session paused (headset removed or system UI showing)
-      this.handleXRPaused(current);
+    } else if (visState === "visible-blurred") {
+      // System UI showing (Quest button pressed) - can show 2D overlay
+      this.handleXRPaused(current, "blurred");
+    } else if (visState === "hidden") {
+      // Headset removed
+      this.handleXRPaused(current, "hidden");
     } else if (visState === "non-immersive") {
       // XR session ended or not started
       this.handleXREnded(current);
@@ -80,7 +83,9 @@ export class BrowserStateSystem extends createSystem({}, {}) {
       this.logger.log("First XR entry -> XR_ACTIVE");
       gameState.setState({
         isXRActive: true,
+        xrPauseReason: null,
         currentState: GAME_STATES.XR_ACTIVE,
+        hasEnteredXR: true,
       });
     } else if (current.currentState === GAME_STATES.XR_PAUSED) {
       // Resuming from pause
@@ -88,6 +93,7 @@ export class BrowserStateSystem extends createSystem({}, {}) {
       this.logger.log(`Resuming XR -> ${resumeState}`);
       gameState.setState({
         isXRActive: true,
+        xrPauseReason: null,
         currentState: resumeState,
       });
     }
@@ -96,16 +102,21 @@ export class BrowserStateSystem extends createSystem({}, {}) {
 
   /**
    * XR paused (headset removed or system UI)
+   * @param {Object} current - Current game state
+   * @param {string} reason - "blurred" (system UI) or "hidden" (headset removed)
    */
-  handleXRPaused(current) {
+  handleXRPaused(current, reason) {
     // Only pause if we're in an active XR state
     if (
       current.currentState >= GAME_STATES.XR_ACTIVE &&
       current.currentState !== GAME_STATES.XR_PAUSED
     ) {
-      this.logger.log(`XR paused, saving state: ${current.currentState}`);
+      this.logger.log(
+        `XR paused (${reason}), saving state: ${current.currentState}`
+      );
       gameState.setState({
         isXRActive: false,
+        xrPauseReason: reason,
         stateBeforePause: current.currentState,
         currentState: GAME_STATES.XR_PAUSED,
       });

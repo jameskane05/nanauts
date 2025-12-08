@@ -37,14 +37,27 @@ import { WRIST_UI_STATE } from "./SpatialUIManager.js";
 import { checkCriteria } from "../utils/CriteriaHelper.js";
 
 export const UI_PANELS = {
+  XR_PAUSED: "xrPaused",
   ROOM_CAPTURE_FAILED: "roomCaptureFailed",
   ROOM_CAPTURE: "roomCapture",
   INCOMING_CALL: "incomingCall",
   ACTIVE_CALL: "activeCall",
+  PORTAL_PLACEMENT: "portalPlacement",
   VOICE_INPUT: "voiceInput",
 };
 
 export const UI_STATE_CONFIG = {
+  // XR Paused (system UI showing or headset removed) - highest priority
+  // Hides all spatial UI while 2D start screen overlay is shown
+  [UI_PANELS.XR_PAUSED]: {
+    showWhen: {
+      currentState: GAME_STATES.XR_PAUSED,
+    },
+    priority: 300,
+    exclusive: true,
+    wristUIState: WRIST_UI_STATE.HIDDEN,
+  },
+
   // Room capture FAILED - highest priority, blocks everything permanently
   // Overrides ALL other states including debug spawn states
   [UI_PANELS.ROOM_CAPTURE_FAILED]: {
@@ -74,7 +87,7 @@ export const UI_STATE_CONFIG = {
   [UI_PANELS.INCOMING_CALL]: {
     showWhen: {
       currentState: GAME_STATES.XR_ACTIVE,
-      roomSetupRequired: false, // Must have room setup complete
+      roomSetupRequired: false,
       introPlayed: false,
       callAnswered: false,
     },
@@ -82,17 +95,32 @@ export const UI_STATE_CONFIG = {
     wristUIState: WRIST_UI_STATE.INCOMING_CALL,
   },
 
-  // Active call - shows after answering, before robots spawn
+  // Active call - shows after answering (includes XR_ACTIVE for resume after XR re-entry)
   [UI_PANELS.ACTIVE_CALL]: {
     showWhen: {
-      currentState: { $gte: GAME_STATES.XR_ACTIVE },
+      currentState: {
+        $gte: GAME_STATES.XR_ACTIVE,
+        $lte: GAME_STATES.PORTAL_PLACEMENT,
+      },
       roomSetupRequired: false,
       callAnswered: true,
       voiceInputEnabled: false,
-      robotsActive: false, // HUD hidden once robots spawn (world panel takes over)
+      robotsActive: false,
+    },
+    priority: 45, // Lower than PORTAL_PLACEMENT so hands mode takes precedence
+    wristUIState: WRIST_UI_STATE.ACTIVE_CALL,
+  },
+
+  // Portal placement - shows during portal placement phase (hands only, adds placement panel)
+  [UI_PANELS.PORTAL_PLACEMENT]: {
+    showWhen: {
+      currentState: GAME_STATES.PORTAL_PLACEMENT,
+      roomSetupRequired: false,
+      robotsActive: false,
+      inputMode: "hands",
     },
     priority: 50,
-    wristUIState: WRIST_UI_STATE.ACTIVE_CALL,
+    wristUIState: WRIST_UI_STATE.PORTAL_PLACEMENT,
   },
 
   // Voice input - only before robots spawn (world panel handles it after)
