@@ -82,11 +82,11 @@
     "call-panel": {
       "content": {
         "flexDirection": "column",
-        "width": "132px",
-        "padding": "7px",
+        "width": "75px",
+        "padding": "5px",
         "alignItems": "center",
         "backgroundColor": "rgba(8, 24, 36, 0.95)",
-        "borderRadius": 6,
+        "borderRadius": 4,
         "border": "1px solid rgba(0, 200, 220, 0.6)"
       }
     },
@@ -95,16 +95,16 @@
         "flexDirection": "row",
         "alignItems": "center",
         "justifyContent": "space-between",
-        "width": "118px",
-        "marginBottom": "5px"
+        "width": "65px",
+        "marginBottom": "3px"
       }
     },
     "app-title": {
       "content": {
-        "fontSize": "7px",
+        "fontSize": "4px",
         "fontWeight": "700",
         "color": "#00d4e6",
-        "letterSpacing": "2px",
+        "letterSpacing": "1px",
         "flexGrow": "1"
       }
     },
@@ -113,20 +113,20 @@
         "flexDirection": "row",
         "alignItems": "center",
         "justifyContent": "flex-end",
-        "gap": "4px"
+        "gap": "2px"
       }
     },
     "status-dot": {
       "content": {
-        "width": "5px",
-        "height": "5px",
+        "width": "3px",
+        "height": "3px",
         "borderRadius": 2,
         "backgroundColor": "#4ade80"
       }
     },
     "status-text": {
       "content": {
-        "fontSize": "5px",
+        "fontSize": "3px",
         "fontWeight": "600",
         "color": "rgba(0, 212, 230, 0.9)",
         "letterSpacing": "1px",
@@ -135,10 +135,10 @@
     },
     "video-container": {
       "content": {
-        "width": "118px",
-        "height": "118px",
+        "width": "64px",
+        "height": "64px",
         "backgroundColor": "rgba(0, 40, 60, 0.6)",
-        "borderRadius": 4,
+        "borderRadius": 3,
         "border": "1px solid rgba(0, 180, 200, 0.3)",
         "overflow": "hidden",
         "flexDirection": "column",

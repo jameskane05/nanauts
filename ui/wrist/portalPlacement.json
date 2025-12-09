@@ -1,0 +1,50 @@
+{
+  "element": {
+    "sourceTag": "panel",
+    "type": "custom",
+    "children": [],
+    "properties": {
+      "class": "placement-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "placement-panel": {
+      "content": {
+        "flexDirection": "column",
+        "width": "40px",
+        "height": "40px",
+        "minHeight": "40px",
+        "minWidth": "40px",
+        "padding": "10px",
+        "alignItems": "center",
+        "backgroundColor": "rgba(8, 24, 36, 0.92)",
+        "borderRadius": 8,
+        "border": "2px solid rgba(0, 200, 220, 0.5)",
+        "opacity": ".3"
+      }
+    }
+  },
+  "ranges": {
+    "placement-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 18
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 17,
+        "column": 0
+      },
+      "end": {
+        "line": 18,
+        "column": 8
+      }
+    }
+  }
+}
