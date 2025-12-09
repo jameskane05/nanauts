@@ -109,6 +109,16 @@ export class UIStateManager {
     const newPanelId = result.panelId;
     const oldPanelId = this.activePanel;
 
+    // Debug: log what we're evaluating
+    if (state.interpretMode === "modem_stay" || state.voiceInputEnabled) {
+      this.logger.log(
+        `Evaluating: interpretMode=${state.interpretMode}, voiceInputEnabled=${state.voiceInputEnabled}, callAnswered=${state.callAnswered}, introPlayed=${state.introPlayed}`
+      );
+      this.logger.log(
+        `Result: panelId=${result.panelId}, wristUIState=${result.wristUIState}`
+      );
+    }
+
     // Debug: log room capture state
     if (state.roomSetupRequired === true) {
       this.logger.log(

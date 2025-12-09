@@ -63,34 +63,15 @@ export const LAMBDA_PROXY_URL =
   import.meta.env.VITE_LAMBDA_PROXY_URL ||
   "https://ust3u26jq6yroaiubpqlcah3au0kxuct.lambda-url.us-east-1.on.aws";
 
-// Use Lambda proxy in production (when not on localhost)
-const isLocalDev =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1";
-export const USE_LAMBDA_PROXY = !isLocalDev;
+// Always use Lambda proxy - keeps API keys server-side only
+export const USE_LAMBDA_PROXY = true;
 
-// OpenAI API configuration (only needed for local dev)
-export const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-if (!OPENAI_API_KEY && isLocalDev) {
-  console.warn(
-    "VITE_OPENAI_API_KEY is not set. OpenAI transcription will not work in local dev."
-  );
-}
-export const OPENAI_TRANSCRIBE_URL =
-  "https://api.openai.com/v1/audio/transcriptions";
-
-// AWS Bedrock configuration (only needed for local dev)
-export const AWS_REGION = import.meta.env.VITE_AWS_REGION || "us-east-1";
-export const AWS_BEDROCK_API_KEY = import.meta.env.VITE_AWS_BEDROCK_API_KEY;
-export const AWS_BEDROCK_MODEL_ID =
-  import.meta.env.VITE_AWS_BEDROCK_MODEL_ID ||
-  "us.meta.llama3-3-70b-instruct-v1:0";
-
-if (!AWS_BEDROCK_API_KEY && isLocalDev) {
-  console.warn(
-    "AWS Bedrock API key not set for local dev. Set VITE_AWS_BEDROCK_API_KEY in .env"
-  );
-}
+// These are no longer needed since Lambda handles all API calls
+export const OPENAI_API_KEY = null;
+export const OPENAI_TRANSCRIBE_URL = null;
+export const AWS_REGION = null;
+export const AWS_BEDROCK_API_KEY = null;
+export const AWS_BEDROCK_MODEL_ID = null;
 
 // Multiple text prompts to search for in each frame
 export const TEXT_PROMPTS = ["guitar", "book", "lamp"];
