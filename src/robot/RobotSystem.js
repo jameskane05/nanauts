@@ -3007,5 +3007,10 @@ export class RobotSystem extends createSystem({}) {
     if (this.world.vfxManager) {
       this.world.vfxManager.update(clampedDeltaTime);
     }
+
+    // Update Entropod minigame (waits for XR + scene understanding before starting)
+    if (this.world.entropodMinigame) {
+      this.world.entropodMinigame.update(clampedDeltaTime);
+    }
   }
 }

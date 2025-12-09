@@ -65,6 +65,11 @@ export class HitTestManager {
       this.vfx.disposeAllPlacedVisuals();
       // Cancel hit test sources to stop WebXR hit testing overhead
       this._cancelAllHitTestSources();
+    } else {
+      // Re-initialize hit test sources when re-enabled
+      if (this.xrSession && !this.hitTestInitialized) {
+        this.initializeHitTestSources(this.xrSession);
+      }
     }
     this.logger.log(`HitTestManager enabled: ${enabled}`);
   }

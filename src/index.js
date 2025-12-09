@@ -95,6 +95,9 @@ import { VFXManager } from "./vfx/VFXManager.js";
 // Hit testing
 import { HitTestManager } from "./utils/HitTestManager.js";
 
+// Minigames
+import { EntropodMinigame } from "./EntropodMinigame.js";
+
 const logger = new Logger("App", true);
 
 // ============================================================================
@@ -338,6 +341,10 @@ World.create(document.getElementById("scene-container"), {
     // Initialize VFX Manager (available to all systems via world.vfxManager)
     const vfxManager = new VFXManager(world);
     logger.log("VFXManager initialized");
+
+    // Initialize Entropod Minigame (listens for gameState.entropodMinigame)
+    new EntropodMinigame(world);
+    logger.log("EntropodMinigame initialized");
 
     // Hit test manager - created when XR becomes active
     let hitTestManagerInitialized = false;

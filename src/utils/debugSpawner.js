@@ -124,6 +124,21 @@ const specialPresets = {
     startPanicMinigame: true, // Flag to start panic minigame after spawn
     spawnRobotsImmediately: true,
   },
+
+  // Entropod minigame - flight path chase around MR room
+  ENTROPOD_MINIGAME: {
+    currentState: 6, // GAME_STATES.PORTAL_PLACEMENT
+    roomSetupRequired: false,
+    introPlayed: true,
+    callAnswered: true,
+    portalPlacementPlayed: true,
+    ambassadorPresentationPlayed: true,
+    robotsActive: true,
+    voiceInputEnabled: false,
+    robotBehavior: "wandering",
+    spawnRobotsImmediately: true,
+    entropodMinigame: true, // Triggers EntropodMinigame.start()
+  },
 };
 
 /**

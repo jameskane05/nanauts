@@ -527,6 +527,91 @@ export const dialogTracks = {
       }
     },
   },
+
+  // Reassurance response - positive (user gave reassuring words)
+  reassurancePositive: {
+    id: "reassurancePositive",
+    audio: "./audio/dialog/10-aww-that-was-touching.mp3",
+    captions: [
+      { text: "Aw, that was touching.", startTime: 0.68, duration: 1.98 },
+      {
+        text: "Baud says they feel much better.",
+        startTime: 3.74,
+        duration: 1.74,
+      },
+    ],
+    criteria: {
+      reassuranceResult: "positive",
+    },
+    autoPlay: true,
+    once: true,
+    priority: 80,
+    showCallPanel: true,
+    playNext: "entropodIntro",
+    onComplete: (gameState) => {
+      gameState.setState({ reassuranceResult: null });
+    },
+  },
+
+  // Entropod minigame intro - plays after Baud is reassured
+  entropodIntro: {
+    id: "entropodIntro",
+    audio: "./audio/dialog/11-entropod-intro.mp3",
+    captions: [
+      {
+        text: "Now, this is a critical part of the scanning phase,",
+        startTime: 2.0,
+        duration: 2.58,
+      },
+      {
+        text: "but we're likely to attract unwanted attention.",
+        startTime: 5.86,
+        duration: 3.58,
+      },
+      {
+        text: "Entropods are the Nanaut's natural enemies.",
+        startTime: 10.76,
+        duration: 2.92,
+      },
+      { text: "They'll appear soon.", startTime: 14.68, duration: 1.24 },
+      {
+        text: "You need to position this device beneath them",
+        startTime: 16.84,
+        duration: 3.4,
+      },
+      {
+        text: "to vacuum them up. Ah, ever seen Ghostbusters?",
+        startTime: 20.24,
+        duration: 4.68,
+      },
+    ],
+    autoPlay: false,
+    once: true,
+    priority: 78,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({ entropodMinigame: true });
+    },
+  },
+
+  // Reassurance response - negative (didn't reassure)
+  reassuranceNegative: {
+    id: "reassuranceNegative",
+    audio: "./audio/dialog/10-uh-that-did-not-inspire-confidence.mp3",
+    captions: [
+      { text: "Uh, that did not inspire confidence.", duration: 3.66 },
+    ],
+    criteria: {
+      reassuranceResult: "negative",
+    },
+    autoPlay: true,
+    once: false, // Can play multiple times since user may need multiple attempts
+    priority: 79,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({ reassuranceResult: null });
+    },
+  },
 };
 
 /**

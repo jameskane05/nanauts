@@ -26,6 +26,13 @@ export class ScorePanelUI {
     // Status state tracking
     this._statusState = "scanning"; // "scanning" | "panicking" | "calmed"
     this._calmedFlashUntil = 0; // Timestamp when "CALMED" flash should end
+
+    // Mode configuration (panic vs entropy)
+    this._mode = "panic"; // "panic" | "entropy"
+    this._labels = {
+      panic: { alert: "PANICKING", success: "CALMED", score: "CALMED" },
+      entropy: { alert: "ENTROPY", success: "CAPTURED", score: "CAPTURED" },
+    };
   }
 
   getDocument() {
@@ -75,6 +82,17 @@ export class ScorePanelUI {
     this.logger.log("Score panel hidden");
   }
 
+  setMode(mode) {
+    this._mode = mode === "entropy" ? "entropy" : "panic";
+    const doc = this.getDocument();
+    if (doc) {
+      const scoreLabel = doc.querySelector(".score-label");
+      if (scoreLabel) {
+        scoreLabel.setProperties({ text: this._labels[this._mode].score });
+      }
+    }
+  }
+
   updateDisplay(current, total) {
     const doc = this.getDocument();
     if (!doc) {
@@ -85,6 +103,12 @@ export class ScorePanelUI {
     const scoreText = doc.getElementById("score-text");
     if (scoreText) {
       scoreText.setProperties({ text: `${current} / ${total}` });
+    }
+
+    // Update score label based on current mode
+    const scoreLabel = doc.querySelector(".score-label");
+    if (scoreLabel) {
+      scoreLabel.setProperties({ text: this._labels[this._mode].score });
     }
 
     // Check if "CALMED" flash should expire (this is called regularly)
@@ -142,13 +166,14 @@ export class ScorePanelUI {
     const statusDot = doc.getElementById("status-dot");
 
     let statusText, textColor, dotColor;
+    const labels = this._labels[this._mode];
 
     if (this._statusState === "panicking") {
-      statusText = "PANICKING";
+      statusText = labels.alert; // "PANICKING" or "ENTROPY"
       textColor = "#ff6666"; // Red/orange
       dotColor = "#ff6666";
     } else if (this._statusState === "calmed") {
-      statusText = "CALMED";
+      statusText = labels.success; // "CALMED" or "CAPTURED"
       textColor = "#66ff66"; // Green
       dotColor = "#66ff66";
     } else {
