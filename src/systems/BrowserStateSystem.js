@@ -79,12 +79,25 @@ export class BrowserStateSystem extends createSystem({}, {}) {
    */
   handleXRVisible(current) {
     if (current.currentState === GAME_STATES.ENTERING_XR) {
-      // First time entering XR
-      this.logger.log("First XR entry -> XR_ACTIVE");
+      // Determine correct state based on game progress
+      let targetState = GAME_STATES.XR_ACTIVE;
+
+      // If intro/call already done and robots not spawned, resume portal placement
+      if (
+        current.introPlayed &&
+        current.callAnswered &&
+        !current.robotsActive
+      ) {
+        targetState = GAME_STATES.PORTAL_PLACEMENT;
+        this.logger.log("XR entry -> PORTAL_PLACEMENT (resuming placement)");
+      } else {
+        this.logger.log("XR entry -> XR_ACTIVE");
+      }
+
       gameState.setState({
         isXRActive: true,
         xrPauseReason: null,
-        currentState: GAME_STATES.XR_ACTIVE,
+        currentState: targetState,
         hasEnteredXR: true,
       });
     } else if (current.currentState === GAME_STATES.XR_PAUSED) {

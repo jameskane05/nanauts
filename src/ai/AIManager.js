@@ -273,10 +273,20 @@ export class AIManager extends createSystem({
             this.logger.log(`Dialog started: ${dialog.id}`);
             if (this.wristUI) {
               this.wristUI.showPhoneme();
+              // Fade in call panel for dialogs that request it
+              if (dialog.showCallPanel) {
+                this.wristUI.fadeInCallPanel();
+              }
             }
           },
           onDialogComplete: (dialog) => {
             this.logger.log(`Dialog complete: ${dialog?.id}`);
+            if (this.wristUI) {
+              // Fade out call panel for dialogs that showed it
+              if (dialog?.showCallPanel) {
+                this.wristUI.fadeOutCallPanel();
+              }
+            }
           },
         });
         await this.dialogManager.initialize();
@@ -721,8 +731,10 @@ export class AIManager extends createSystem({
     const textToCheck = result.corrected_transcription || result.transcription;
     this._checkRobotNameInTranscription(textToCheck);
 
-    // Show result in wrist UI
-    this.wristUI?.showInterpretResult(result);
+    const state = gameState.getState();
+
+    // Show result in wrist UI (pass interpretMode for different display)
+    this.wristUI?.showInterpretResult(result, state.interpretMode);
 
     // Notify robots of interpretation result - they react based on intent/sentiment
     const robotSystem = this.world?.robotSystem;
@@ -731,27 +743,76 @@ export class AIManager extends createSystem({
       this.logger.log("Robot interpret response initiated");
     }
 
-    // Set greeting result state for DialogManager to react to
-    // Note: Dialog has once:true and criteria checks, so we just set the state
-    // TranslatorUI may set friendlyGreetingReceived before this runs, but that's fine
-    const state = gameState.getState();
+    // Handle based on current interpret mode
     if (state.voiceInputEnabled) {
-      const isPositiveGreeting =
-        result.is_greeting &&
-        result.sentiment?.sentiment !== "negative" &&
-        !result.sentiment?.is_rude;
+      if (state.interpretMode === "reassurance") {
+        // Reassurance mode: check if speech is reassuring/comforting
+        const isReassuring =
+          result.intent === "reassuring" ||
+          (result.sentiment?.sentiment === "friendly" &&
+            result.sentiment?.score > 0.3);
 
-      this.logger.log(
-        `Setting greetingResult: ${
-          isPositiveGreeting ? "positive" : "negative"
-        }`
-      );
-      gameState.setState({
-        greetingResult: isPositiveGreeting ? "positive" : "negative",
-      });
+        this.logger.log(
+          `Setting reassuranceResult: ${isReassuring ? "positive" : "negative"}`
+        );
+        gameState.setState({
+          reassuranceResult: isReassuring ? "positive" : "negative",
+        });
+
+        // Trigger Baud reaction based on result
+        this._triggerBaudReaction(isReassuring, result);
+      } else {
+        // Default greeting mode
+        const isPositiveGreeting =
+          result.is_greeting &&
+          result.sentiment?.sentiment !== "negative" &&
+          !result.sentiment?.is_rude;
+
+        this.logger.log(
+          `Setting greetingResult: ${
+            isPositiveGreeting ? "positive" : "negative"
+          }`
+        );
+        gameState.setState({
+          greetingResult: isPositiveGreeting ? "positive" : "negative",
+        });
+      }
     }
 
     window._lastInterpretResult = result;
+  }
+
+  _triggerBaudReaction(isPositive, result) {
+    const robotSystem = this.world?.robotSystem;
+    if (!robotSystem) return;
+
+    const baudResult = robotSystem.characterManager?.getByName("Baud");
+    if (!baudResult) return;
+
+    const { entityIndex } = baudResult;
+    const voice = robotSystem.audioManager?.getVoice(entityIndex);
+
+    if (isPositive) {
+      // Happy reaction
+      robotSystem.setRobotFaceEmotion(entityIndex, "HAPPY");
+      voice?.happy?.();
+      robotSystem.interactionManager?.triggerSoloAnimation(
+        entityIndex,
+        "happyBounce"
+      );
+      this.logger.log("Baud is happy - reassurance received!");
+
+      // Disable voice input and reset interpret mode after success
+      gameState.setState({
+        voiceInputEnabled: false,
+        interpretMode: "greeting",
+      });
+    } else {
+      // Sad reaction
+      robotSystem.setRobotFaceEmotion(entityIndex, "SAD");
+      voice?.sad?.();
+      this.logger.log("Baud is sad - not reassured");
+    }
   }
 
   async _processVoiceSegmentation(audioBase64) {

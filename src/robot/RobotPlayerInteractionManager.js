@@ -611,8 +611,18 @@ export class RobotPlayerInteractionManager {
       }
     }
 
-    // Update VFX for each hand
-    for (const side of ["left", "right"]) {
+    // Update VFX only for the preferred hand based on handedness setting
+    const preferredHand = gameState.getState().handedness || "right";
+    const nonPreferredHand = preferredHand === "right" ? "left" : "right";
+
+    // Stop VFX on non-preferred hand if it was active
+    const nonPreferredVfx = this._dataLinkVFX[nonPreferredHand];
+    if (nonPreferredVfx?.isActive) {
+      nonPreferredVfx.stop();
+      this._dataLinkTargets[nonPreferredHand] = null;
+    }
+
+    for (const side of [preferredHand]) {
       const vfx = this._dataLinkVFX[side];
       if (!vfx) continue;
 
@@ -859,6 +869,15 @@ export class RobotPlayerInteractionManager {
       this.panicCooldownUntil = performance.now() + cooldownDuration;
 
       this.minigameCalmCount++;
+
+      // Trigger calm dialogs via gameState
+      if (this.minigameCalmCount === 1) {
+        gameState.setState({ firstCalmCompleted: true });
+      } else if (this.minigameCalmCount === 2) {
+        gameState.setState({ secondCalmCompleted: true });
+      } else if (this.minigameCalmCount === 3) {
+        gameState.setState({ thirdCalmCompleted: true });
+      }
 
       // Stop panic VFX for this robot
       this.robotSystem.scanManager?.stopPanicVFX(entityIndex);

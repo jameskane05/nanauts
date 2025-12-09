@@ -1659,4 +1659,161 @@ export class XrInputSystem extends createSystem({}) {
       );
     }
   }
+
+  /**
+   * Get controller/hand ray for a specific hand
+   * @param {string} hand - "left" or "right"
+   * @returns {{ position: Vector3, direction: Vector3, source: string } | null}
+   */
+  getControllerRay(hand) {
+    if (!this.xrInput) return null;
+
+    const position = new THREEVector3();
+    const direction = new THREEVector3(0, 0, -1);
+    let source = null;
+
+    // Try raySpaces first (hands - most accurate for hand tracking)
+    const raySpace = this.xrInput.xrOrigin?.raySpaces?.[hand];
+    if (raySpace) {
+      raySpace.getWorldPosition(position);
+      const quat = new Quaternion();
+      raySpace.getWorldQuaternion(quat);
+      direction.applyQuaternion(quat);
+      source = `raySpaces.${hand}`;
+      return { position, direction, source };
+    }
+
+    // Try controller adapter (stored by XrInputSystem)
+    const controllerAdapter = this.controllerAdapters?.[hand];
+    if (controllerAdapter) {
+      // The adapter is the primary adapter signal value - check for ray or grip
+      if (controllerAdapter.ray) {
+        controllerAdapter.ray.getWorldPosition(position);
+        const quat = new Quaternion();
+        controllerAdapter.ray.getWorldQuaternion(quat);
+        direction.applyQuaternion(quat);
+        source = `controllerAdapter.${hand}.ray`;
+        return { position, direction, source };
+      }
+      if (controllerAdapter.grip) {
+        controllerAdapter.grip.getWorldPosition(position);
+        const quat = new Quaternion();
+        controllerAdapter.grip.getWorldQuaternion(quat);
+        direction.applyQuaternion(quat);
+        source = `controllerAdapter.${hand}.grip`;
+        return { position, direction, source };
+      }
+    }
+
+    // Try gamepad grip
+    const grip = this.xrInput.gamepads?.[hand]?.grip;
+    if (grip) {
+      grip.getWorldPosition(position);
+      const quat = new Quaternion();
+      grip.getWorldQuaternion(quat);
+      direction.applyQuaternion(quat);
+      source = `gamepads.${hand}.grip`;
+      return { position, direction, source };
+    }
+
+    // Try gamepad object3D
+    const obj3D = this.xrInput.gamepads?.[hand]?.object3D;
+    if (obj3D) {
+      obj3D.getWorldPosition(position);
+      const quat = new Quaternion();
+      obj3D.getWorldQuaternion(quat);
+      direction.applyQuaternion(quat);
+      source = `gamepads.${hand}.object3D`;
+      return { position, direction, source };
+    }
+
+    // Try XR session inputSources directly (fallback)
+    const session = this.world.renderer?.xr?.getSession?.();
+    const refSpace = this.world.renderer?.xr?.getReferenceSpace?.();
+    const frame = this.world.renderer?.xr?.getFrame?.();
+    if (session?.inputSources && refSpace && frame) {
+      for (const inputSource of session.inputSources) {
+        if (
+          inputSource.handedness === hand &&
+          inputSource.targetRayMode === "tracked-pointer" &&
+          inputSource.targetRaySpace
+        ) {
+          try {
+            const pose = frame.getPose(inputSource.targetRaySpace, refSpace);
+            if (pose) {
+              position.set(
+                pose.transform.position.x,
+                pose.transform.position.y,
+                pose.transform.position.z
+              );
+              const q = pose.transform.orientation;
+              direction.set(0, 0, -1);
+              direction.applyQuaternion(new Quaternion(q.x, q.y, q.z, q.w));
+              source = `session.${hand}`;
+              return { position, direction, source };
+            }
+          } catch (e) {
+            // Ignore pose errors
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get controller ray for preferred hand (from gameState.handedness)
+   * Falls back to opposite hand if preferred not available
+   * @returns {{ position: Vector3, direction: Vector3, source: string, hand: string } | null}
+   */
+  getPreferredControllerRay() {
+    const preferredHand = gameState.getState().handedness || "right";
+    const fallbackHand = preferredHand === "right" ? "left" : "right";
+
+    let ray = this.getControllerRay(preferredHand);
+    if (ray) {
+      return { ...ray, hand: preferredHand };
+    }
+
+    ray = this.getControllerRay(fallbackHand);
+    if (ray) {
+      return { ...ray, hand: fallbackHand };
+    }
+
+    return null;
+  }
+
+  /**
+   * Check what input sources are available (for debugging)
+   * @returns {object} Availability info
+   */
+  getInputAvailability() {
+    const xrInput = this.xrInput;
+    return {
+      xrInput: !!xrInput,
+      xrOrigin: !!xrInput?.xrOrigin,
+      raySpaces: {
+        left: !!xrInput?.xrOrigin?.raySpaces?.left,
+        right: !!xrInput?.xrOrigin?.raySpaces?.right,
+      },
+      controllerAdapters: {
+        left: !!this.controllerAdapters?.left,
+        right: !!this.controllerAdapters?.right,
+        leftRay: !!this.controllerAdapters?.left?.ray,
+        rightRay: !!this.controllerAdapters?.right?.ray,
+      },
+      gamepads: {
+        left: {
+          grip: !!xrInput?.gamepads?.left?.grip,
+          object3D: !!xrInput?.gamepads?.left?.object3D,
+        },
+        right: {
+          grip: !!xrInput?.gamepads?.right?.grip,
+          object3D: !!xrInput?.gamepads?.right?.object3D,
+        },
+      },
+      fingertipColliders: this.fingertipColliders.size,
+    };
+  }
 }

@@ -314,6 +314,18 @@ export class SpatialUIManager {
     this.callUI.updatePhonemeFrame(frameIndex, uv);
   }
 
+  fadeInCallPanel() {
+    this.registry.setPanelVisible("call", true);
+    this.registry.fadeInPanel("call", 0.3);
+    this.callUI.setState(CALL_STATE.ACTIVE);
+    this.logger.log("Call panel fading in for dialog");
+  }
+
+  fadeOutCallPanel() {
+    this.registry.fadePanel("call", 0, 0.3);
+    this.logger.log("Call panel fading out after dialog");
+  }
+
   // Public API - Voice Panel
   setVoiceRecordingState(state) {
     this.voiceUI.setRecordingState(state);
@@ -323,8 +335,8 @@ export class SpatialUIManager {
     this.voiceUI.showTranscription(transcription, status);
   }
 
-  showInterpretResult(result) {
-    this.voiceUI.showInterpretResult(result);
+  showInterpretResult(result, interpretMode = "greeting") {
+    this.voiceUI.showInterpretResult(result, interpretMode);
   }
 
   // Public API - Score Panel

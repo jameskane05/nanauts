@@ -31,7 +31,7 @@
  */
 
 import { Logger } from "../utils/Logger.js";
-import { gameState } from "../gameState.js";
+import { gameState, GAME_STATES } from "../gameState.js";
 import {
   dialogTracks,
   getDialogsForState,
@@ -96,6 +96,10 @@ export class DialogManager {
     this.onDialogStart = options.onDialogStart || null;
     this.onDialogComplete = options.onDialogComplete || null;
     this.onCaptionChange = options.onCaptionChange || null;
+
+    // XR pause state
+    this._pausedForXR = false;
+    this._pausedAudioTime = 0;
   }
 
   async initialize() {
@@ -242,13 +246,43 @@ export class DialogManager {
 
     // Use gameState.on() - no "subscribe" method exists
     this._stateHandler = (newState, oldState) => {
+      // Handle XR pause/resume - pause dialogs when:
+      // - XR session ends (state < XR_ACTIVE)
+      // - XR paused: headset removed (hidden) or system UI showing (visible-blurred)
+      const wasActiveXR =
+        oldState?.currentState >= GAME_STATES.XR_ACTIVE &&
+        oldState?.currentState !== GAME_STATES.XR_PAUSED;
+      const isActiveXR =
+        newState?.currentState >= GAME_STATES.XR_ACTIVE &&
+        newState?.currentState !== GAME_STATES.XR_PAUSED;
+
+      // XR became inactive (exited, paused, or system UI) - pause dialog
+      if (wasActiveXR && !isActiveXR) {
+        this.logger.log(
+          `XR inactive (state ${oldState?.currentState} -> ${newState?.currentState}) - pausing dialog`
+        );
+        this._pauseForXR();
+      }
+      // XR became active again - resume dialog
+      else if (!wasActiveXR && isActiveXR && this._pausedForXR) {
+        this.logger.log(
+          `XR active (state ${oldState?.currentState} -> ${newState?.currentState}) - resuming dialog`
+        );
+        this._resumeFromXR();
+      }
+
       // Check for any relevant state changes (not just currentState)
       const relevantChanges =
         newState?.currentState !== oldState?.currentState ||
         newState?.robotsActive !== oldState?.robotsActive ||
         newState?.robotBehavior !== oldState?.robotBehavior ||
         newState?.introPlayed !== oldState?.introPlayed ||
-        newState?.greetingResult !== oldState?.greetingResult;
+        newState?.greetingResult !== oldState?.greetingResult ||
+        newState?.firstCalmCompleted !== oldState?.firstCalmCompleted ||
+        newState?.secondCalmCompleted !== oldState?.secondCalmCompleted ||
+        newState?.thirdCalmCompleted !== oldState?.thirdCalmCompleted ||
+        newState?.panicMinigameCompleted !== oldState?.panicMinigameCompleted ||
+        newState?.reassuranceResult !== oldState?.reassuranceResult;
 
       if (relevantChanges) {
         this.logger.log(
@@ -386,7 +420,7 @@ export class DialogManager {
    * Update playback state - call this from ECS system update() each frame
    */
   _updatePlayback() {
-    if (!this.isPlaying || !this._playbackActive) return;
+    if (!this.isPlaying || !this._playbackActive || this._pausedForXR) return;
 
     // Check if captions are enabled
     const captionsEnabled = gameState?.getState?.()?.captionsEnabled ?? true;
@@ -573,6 +607,9 @@ export class DialogManager {
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
+    // Skip updates when paused for XR
+    if (this._pausedForXR) return;
+
     // Update pending delayed dialogs
     for (const [dialogId, pending] of this.pendingDialogs) {
       pending.timer += dt;
@@ -594,6 +631,7 @@ export class DialogManager {
   stop() {
     this.isPlaying = false;
     this._playbackActive = false;
+    this._pausedForXR = false;
 
     if (this.lipSyncManager) {
       this.lipSyncManager.stop();
@@ -603,6 +641,47 @@ export class DialogManager {
     this.captionMesh.visible = false;
     this.currentDialog = null;
     this.currentCaptionIndex = -1;
+  }
+
+  /**
+   * Pause dialog for XR exit/pause
+   */
+  _pauseForXR() {
+    if (!this.isPlaying || this._pausedForXR) return;
+
+    this._pausedForXR = true;
+    this.logger.log(`Pausing dialog for XR exit: ${this.currentDialog?.id}`);
+
+    // Save current audio time and pause
+    if (this.lipSyncManager?.audioElement) {
+      this._pausedAudioTime = this.lipSyncManager.audioElement.currentTime;
+      this.lipSyncManager.audioElement.pause();
+    }
+
+    // Hide captions
+    if (this.captionMesh) {
+      this.captionMesh.visible = false;
+    }
+  }
+
+  /**
+   * Resume dialog after XR re-entry
+   */
+  _resumeFromXR() {
+    if (!this._pausedForXR) return;
+
+    this._pausedForXR = false;
+    this.logger.log(
+      `Resuming dialog after XR entry: ${this.currentDialog?.id}`
+    );
+
+    // Resume audio from where we left off
+    if (this.lipSyncManager?.audioElement && this.isPlaying) {
+      this.lipSyncManager.audioElement.currentTime = this._pausedAudioTime;
+      this.lipSyncManager.audioElement.play().catch((e) => {
+        this.logger.warn(`Failed to resume audio: ${e}`);
+      });
+    }
   }
 
   /**

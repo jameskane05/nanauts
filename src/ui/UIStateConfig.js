@@ -111,7 +111,7 @@ export const UI_STATE_CONFIG = {
     wristUIState: WRIST_UI_STATE.ACTIVE_CALL,
   },
 
-  // Portal placement - shows during portal placement phase (hands only, adds placement panel)
+  // Portal placement (hands) - shows portal placement panel on wrist
   [UI_PANELS.PORTAL_PLACEMENT]: {
     showWhen: {
       currentState: GAME_STATES.PORTAL_PLACEMENT,
@@ -121,6 +121,18 @@ export const UI_STATE_CONFIG = {
     },
     priority: 50,
     wristUIState: WRIST_UI_STATE.PORTAL_PLACEMENT,
+  },
+
+  // Portal placement (controllers) - no wrist panel, just call panel in HUD
+  [UI_PANELS.ACTIVE_CALL + "_placement"]: {
+    showWhen: {
+      currentState: GAME_STATES.PORTAL_PLACEMENT,
+      roomSetupRequired: false,
+      robotsActive: false,
+      inputMode: "controllers",
+    },
+    priority: 50,
+    wristUIState: WRIST_UI_STATE.ACTIVE_CALL,
   },
 
   // Voice input - only before robots spawn (world panel handles it after)

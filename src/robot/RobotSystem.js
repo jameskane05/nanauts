@@ -519,6 +519,22 @@ export class RobotSystem extends createSystem({}) {
     }
   }
 
+  /**
+   * Summon a robot by name - navigates to player and looks at them
+   * @param {string} robotName - Character name (Modem, Blit, Baud)
+   * @returns {boolean} True if robot was summoned
+   */
+  summonRobotByName(robotName) {
+    const result = this.characterManager?.getByName(robotName);
+    if (!result) {
+      this.logger.warn(`Cannot summon robot - not found: ${robotName}`);
+      return false;
+    }
+
+    const { entityIndex } = result;
+    return this.playerInteractionManager?.summonRobot(entityIndex) ?? false;
+  }
+
   rebuildNavMesh() {
     const success = this.navMeshManager.rebuild();
     if (success) {
@@ -1892,8 +1908,8 @@ export class RobotSystem extends createSystem({}) {
       return;
     }
 
-    // Track if first panic dialog has been played
-    let firstPanicDialogPlayed = false;
+    // Track panic count for triggering different dialogs
+    let panicCount = 0;
 
     // Wire up UI callbacks if wristUI provided
     if (wristUI) {
@@ -1905,18 +1921,21 @@ export class RobotSystem extends createSystem({}) {
       pim.onMinigameComplete = () => {
         wristUI.hideScorePanel();
         this.logger.log("Panic minigame complete!");
+        gameState.setState({ panicMinigameCompleted: true });
       };
       // Set callback for when panic starts
       pim.onPanicStart = () => {
         wristUI.scoreUI?.setPanicking(() => pim.isAnyRobotPanicking());
+        panicCount++;
 
-        // Play "worked up" dialog on first panic only
-        if (!firstPanicDialogPlayed) {
-          firstPanicDialogPlayed = true;
-          const dialogManager = this.world?.aiManager?.dialogManager;
-          if (dialogManager) {
+        const dialogManager = this.world?.aiManager?.dialogManager;
+        if (dialogManager) {
+          if (panicCount === 1) {
             this.logger.log("Playing first panic dialog: panicWorkedUp");
             dialogManager.playDialog("panicWorkedUp");
+          } else if (panicCount === 4) {
+            this.logger.log("Playing fourth panic dialog: panicFourth");
+            dialogManager.playDialog("panicFourth");
           }
         }
       };

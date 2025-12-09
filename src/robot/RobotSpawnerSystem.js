@@ -249,32 +249,52 @@ export class RobotSpawnerSystem extends createSystem({}) {
     }
   }
 
-  // Attach VFX elements (thumbtap, line) to the portal placement panel managed by SpatialUIManager
+  // Attach line VFX (works for both hands and controllers)
   _attachPlacementVFX() {
+    if (this._vfxAttached) {
+      this.logger.log("[VFX] _attachPlacementVFX called but already attached");
+      return true;
+    }
+
+    this.logger.log(
+      `[VFX] Attaching VFX, _placementLine exists: ${!!this._placementLine}`
+    );
+
+    // Create line VFX (independent of panel)
+    this._createPlacementLineVFX();
+    this._vfxAttached = true;
+    this._placementPanelVisible = true;
+    this._fadeTarget = 1;
+    this._fadeProgress = 0;
+
+    this.logger.log(
+      `[VFX] After create: _placementLine=${!!this._placementLine}, ` +
+        `inScene=${!!this._placementLine?.parent}`
+    );
+
+    // Attach thumbtap to panel if available (hands mode only)
     const wristUI = this.world.aiManager?.wristUI;
-    if (!wristUI) return false;
-
-    const registry = wristUI.registry;
-    const panel = registry?.getPanel("portalPlacement");
-    if (!panel?.group) return false;
-
-    // Add thumbtap renderer if not already added
-    if (!this._vfxAttached) {
+    const panel = wristUI?.registry?.getPanel("portalPlacement");
+    if (panel?.group) {
       this._thumbTap.create(panel.group);
-      this._createPlacementLineVFX();
-      this._vfxAttached = true;
-      this._placementPanelVisible = true;
-      this._fadeTarget = 1;
-      this._fadeProgress = 0;
       this._updatePlacementInputMode();
-      this.logger.log("Placement VFX attached to panel");
+      this.logger.log("Placement VFX attached (with panel)");
+    } else {
+      this.logger.log("Placement VFX attached (no panel - controller mode)");
     }
 
     return true;
   }
 
   _cleanupPlacementVFX() {
-    if (!this._vfxAttached) return;
+    if (!this._vfxAttached) {
+      this.logger.log("[VFX] _cleanupPlacementVFX called but not attached");
+      return;
+    }
+
+    this.logger.log(
+      `[VFX] Cleaning up VFX, _placementLine=${!!this._placementLine}`
+    );
 
     this._thumbTap.hide();
     this._disposePlacementLineVFX();
@@ -282,29 +302,13 @@ export class RobotSpawnerSystem extends createSystem({}) {
     this._placementPanelVisible = false;
     this._fadeProgress = 0;
 
-    this.logger.log("Placement VFX cleaned up");
+    this.logger.log(
+      `[VFX] After cleanup: _placementLine=${!!this
+        ._placementLine}, _vfxAttached=${this._vfxAttached}`
+    );
   }
 
   _updatePlacementFade(dt) {
-    const wristUI = this.world.aiManager?.wristUI;
-    if (!wristUI) return;
-
-    const panel = wristUI.registry.getPanel("portalPlacement");
-    if (!panel?.group) return;
-
-    // Always update thumbtap visibility based on current state (not just during animation)
-    if (this._thumbTap.mesh) {
-      if (this._thumbTap.mesh.material) {
-        this._thumbTap.mesh.material.opacity = this._fadeProgress;
-      }
-      // Show in hands mode when panel is visible
-      if (this._fadeProgress > 0.01 && this._inputMode === "hands") {
-        this._thumbTap.mesh.visible = true;
-      } else {
-        this._thumbTap.mesh.visible = false;
-      }
-    }
-
     // Skip if already at target
     if (Math.abs(this._fadeProgress - this._fadeTarget) < 0.001) {
       this._fadeProgress = this._fadeTarget;
@@ -318,7 +322,6 @@ export class RobotSpawnerSystem extends createSystem({}) {
         this._fadeTarget,
         this._fadeProgress + speed * dt
       );
-      panel.group.visible = true;
     } else {
       this._fadeProgress = Math.max(
         this._fadeTarget,
@@ -326,8 +329,25 @@ export class RobotSpawnerSystem extends createSystem({}) {
       );
     }
 
-    // Apply opacity to panel materials
-    this._applyOpacityToGroup(panel.group, this._fadeProgress);
+    // Update thumbtap visibility (hands mode only, when panel exists)
+    if (this._thumbTap.mesh) {
+      if (this._thumbTap.mesh.material) {
+        this._thumbTap.mesh.material.opacity = this._fadeProgress;
+      }
+      if (this._fadeProgress > 0.01 && this._inputMode === "hands") {
+        this._thumbTap.mesh.visible = true;
+      } else {
+        this._thumbTap.mesh.visible = false;
+      }
+    }
+
+    // Apply opacity to panel materials if panel exists (hands mode)
+    const wristUI = this.world.aiManager?.wristUI;
+    const panel = wristUI?.registry?.getPanel("portalPlacement");
+    if (panel?.group) {
+      panel.group.visible = true;
+      this._applyOpacityToGroup(panel.group, this._fadeProgress);
+    }
   }
 
   _applyOpacityToGroup(group, opacity) {
@@ -488,81 +508,56 @@ export class RobotSpawnerSystem extends createSystem({}) {
       return;
     }
 
-    const activeHand = hitTestManager.activeHand;
+    // Respect handedness preference from settings
+    const preferredHand = gameState.getState().handedness || "right";
+    const fallbackHand = preferredHand === "right" ? "left" : "right";
     const hitPose =
-      hitTestManager.lastHitPose?.right || hitTestManager.lastHitPose?.left;
+      hitTestManager.lastHitPose?.[preferredHand] ||
+      hitTestManager.lastHitPose?.[fallbackHand];
 
-    // Get controller/hand position - try multiple sources
-    const xrInput = this.world.xrInputManager?.xrInput;
+    // Get controller ray from XrInputSystem (single source of truth)
+    const xrInputSystem = this.world.xrInputSystem;
     let startPos = null;
     let rayDirection = null;
 
-    // Priority: raySpaces > gamepads.grip > targetRaySpace from session
-    // Use actual activeHand if valid, otherwise use handedness preference from settings
-    const preferredHand = gameState.getState().handedness || "right";
-    const fallbackHand = preferredHand === "right" ? "left" : "right";
-    const handsToTry =
-      activeHand && activeHand !== "none"
-        ? [activeHand, preferredHand, fallbackHand]
-        : [preferredHand, fallbackHand];
-
-    for (const hand of handsToTry) {
-      if (startPos) break;
-
-      // Try raySpaces
-      if (xrInput?.xrOrigin?.raySpaces?.[hand]) {
-        const raySpace = xrInput.xrOrigin.raySpaces[hand];
-        startPos = new Vector3();
-        raySpace.getWorldPosition(startPos);
-        // Get ray direction from raySpace
-        rayDirection = new Vector3(0, 0, -1);
-        rayDirection.applyQuaternion(raySpace.quaternion);
-        break;
-      }
-
-      // Try gamepad grip
-      if (xrInput?.gamepads?.[hand]?.grip) {
-        const grip = xrInput.gamepads[hand].grip;
-        startPos = new Vector3();
-        grip.getWorldPosition(startPos);
-        rayDirection = new Vector3(0, 0, -1);
-        rayDirection.applyQuaternion(grip.quaternion);
-        break;
+    // Debug log once per second
+    if (
+      !this._lastLineVFXLog ||
+      performance.now() - this._lastLineVFXLog > 1000
+    ) {
+      this._lastLineVFXLog = performance.now();
+      if (xrInputSystem) {
+        const avail = xrInputSystem.getInputAvailability();
+        this.logger.log(
+          `[LineVFX] Input availability: ${JSON.stringify(avail)}`
+        );
+      } else {
+        this.logger.log(`[LineVFX] xrInputSystem not available`);
       }
     }
 
-    // Last resort: try to get controller position from XR session directly
-    if (!startPos) {
-      const session = this.world.renderer?.xr?.getSession?.();
-      const refSpace = this.world.renderer?.xr?.getReferenceSpace?.();
-      const frame = this.world.renderer?.xr?.getFrame?.();
-      if (session?.inputSources && refSpace && frame) {
-        for (const source of session.inputSources) {
-          if (
-            source.targetRayMode === "tracked-pointer" &&
-            source.targetRaySpace
-          ) {
-            try {
-              const pose = frame.getPose(source.targetRaySpace, refSpace);
-              if (pose) {
-                startPos = new Vector3(
-                  pose.transform.position.x,
-                  pose.transform.position.y,
-                  pose.transform.position.z
-                );
-                // Extract direction from pose orientation
-                const q = pose.transform.orientation;
-                rayDirection = new Vector3(0, 0, -1);
-                rayDirection.applyQuaternion(
-                  new Quaternion(q.x, q.y, q.z, q.w)
-                );
-                break;
-              }
-            } catch (e) {
-              // Ignore pose errors
-            }
-          }
-        }
+    // Use XrInputSystem's centralized API
+    const ray = xrInputSystem?.getPreferredControllerRay();
+    if (ray) {
+      startPos = ray.position;
+      rayDirection = ray.direction;
+
+      if (
+        !this._lastResultLog ||
+        performance.now() - this._lastResultLog > 1000
+      ) {
+        this._lastResultLog = performance.now();
+        this.logger.log(
+          `[LineVFX] Got ray from ${ray.source}, hand=${ray.hand}`
+        );
+      }
+    } else {
+      if (
+        !this._lastResultLog ||
+        performance.now() - this._lastResultLog > 1000
+      ) {
+        this._lastResultLog = performance.now();
+        this.logger.log(`[LineVFX] No controller ray available`);
       }
     }
 
@@ -1359,14 +1354,26 @@ export class RobotSpawnerSystem extends createSystem({}) {
       }
     }
 
-    // Check if portal placement panel is visible (managed by SpatialUIManager) and attach VFX
-    const wristUI = this.world.aiManager?.wristUI;
-    const placementPanel = wristUI?.registry?.getPanel("portalPlacement");
-    const panelVisible = placementPanel?.group?.visible;
+    // Check if in portal placement state (works for both hands and controllers)
+    const currentGameState = gameState.getState();
+    const inPortalPlacement =
+      currentGameState.currentState === GAME_STATES.PORTAL_PLACEMENT &&
+      !currentGameState.robotsActive &&
+      !currentGameState.roomSetupRequired;
 
-    if (panelVisible && !this._vfxAttached) {
+    // Debug: log state changes affecting VFX
+    if (this._lastInPortalPlacement !== inPortalPlacement) {
+      this.logger.log(
+        `[VFX] inPortalPlacement changed: ${this._lastInPortalPlacement} -> ${inPortalPlacement}, ` +
+          `state=${currentGameState.currentState}, robotsActive=${currentGameState.robotsActive}, ` +
+          `roomSetupRequired=${currentGameState.roomSetupRequired}, vfxAttached=${this._vfxAttached}`
+      );
+      this._lastInPortalPlacement = inPortalPlacement;
+    }
+
+    if (inPortalPlacement && !this._vfxAttached) {
       this._attachPlacementVFX();
-    } else if (!panelVisible && this._vfxAttached) {
+    } else if (!inPortalPlacement && this._vfxAttached) {
       this._cleanupPlacementVFX();
     }
 

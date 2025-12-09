@@ -412,6 +412,110 @@ export const dialogTracks = {
     autoPlay: false,
     once: true,
     priority: 70,
+    showCallPanel: true,
+  },
+
+  panicFourth: {
+    id: "panicFourth",
+    audio: "./audio/dialog/08-whoa-hes-really-moving.mp3",
+    captions: [
+      { text: "Whoa, he's really moving!", duration: 4.58 },
+      {
+        text: "Quite nervous for a godlike AI.",
+        startTime: 4.58,
+        duration: 2.38,
+      },
+    ],
+    autoPlay: false,
+    once: true,
+    priority: 70,
+    showCallPanel: true,
+  },
+
+  panicCalmed: {
+    id: "panicCalmed",
+    audio: "./audio/dialog/08_there-there-little-friend.mp3",
+    captions: [
+      { text: "There there, little friend.", duration: 1.88 },
+      { text: "Good job. Que calm.", startTime: 2.74, duration: 1.38 },
+    ],
+    criteria: {
+      firstCalmCompleted: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 70,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({ firstCalmCompleted: false });
+    },
+  },
+
+  panicCalmedSecond: {
+    id: "panicCalmedSecond",
+    audio: "./audio/dialog/08-such-a-cutie.mp3",
+    captions: [
+      { text: "Such a cutie.", duration: 1.88 },
+      { text: "Now, another.", startTime: 2.44, duration: 1.1 },
+    ],
+    criteria: {
+      secondCalmCompleted: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 70,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({ secondCalmCompleted: false });
+    },
+  },
+
+  panicCalmedThird: {
+    id: "panicCalmedThird",
+    audio: "./audio/dialog/08-you-soothed-the-savage-nano-bot.mp3",
+    captions: [
+      { text: "You soothed the savage nanobot, great work!", duration: 4.4 },
+    ],
+    criteria: {
+      thirdCalmCompleted: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 70,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({ thirdCalmCompleted: false });
+    },
+  },
+
+  baudStillWorried: {
+    id: "baudStillWorried",
+    audio: "./audio/dialog/09-baud-is-still-worried.mp3",
+    captions: [
+      { text: "Baud is still worried.", duration: 2.42 },
+      {
+        text: "Use the translator to reassure them.",
+        startTime: 3.08,
+        duration: 2.84,
+      },
+    ],
+    criteria: {
+      panicMinigameCompleted: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 75,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({
+        panicMinigameCompleted: false,
+        voiceInputEnabled: true,
+        interpretMode: "reassurance",
+      });
+      // Summon Baud to player
+      const state = gameState.getState();
+      state.world?.robotSystem?.summonRobotByName("Baud");
+    },
   },
 };
 

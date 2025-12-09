@@ -93,12 +93,18 @@ export class GameState {
       // Robot behavior states
       friendlyGreetingReceived: false, // True after player gives friendly greeting
       greetingResult: null, // "positive" | "negative" | null - set after interpret, triggers dialog
+      reassuranceResult: null, // "positive" | "negative" | null - set after reassurance interpret
+      interpretMode: "greeting", // "greeting" | "reassurance" - what AI should look for
       robotsMovingToGoal: false, // True while robots are navigating to goal
       robotsAtGoal: false, // True when all robots have reached goal
       robotBehavior: "wandering", // "gathered" | "wandering" | "moving_to_goal" | "stationary"
+      firstCalmCompleted: false, // True momentarily when first robot calmed in panic minigame
+      secondCalmCompleted: false, // True momentarily when second robot calmed in panic minigame
+      thirdCalmCompleted: false, // True momentarily when third robot calmed in panic minigame
 
       // Minigame state
       minigameActive: false, // True when panic minigame is active (disables voice input)
+      panicMinigameCompleted: false, // True momentarily when panic minigame finishes
 
       // Input mode tracking (controllers vs hand tracking)
       inputMode: "controllers", // "controllers" | "hands" - determines UI prompts

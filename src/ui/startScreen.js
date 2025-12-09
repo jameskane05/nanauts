@@ -107,7 +107,8 @@ export class StartScreen {
         </div>
 
         <div class="footer">
-          <p class="credits">Made for WebXR with IWSDK, Llama 3.3, SAM 3 & SAM 3D Objects</p>
+          <p class="credits">Made for WebXR with IWSDK and Llama 3.3</p>
+          <p class="credits">for controllers or hand tracking (microgestures)</p>
         </div>
       </div>
     `;

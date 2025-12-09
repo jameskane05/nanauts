@@ -251,7 +251,7 @@ export class TranslatorUI {
     this.recordingState = VOICE_RECORDING_STATE.IDLE;
   }
 
-  showInterpretResult(result) {
+  showInterpretResult(result, interpretMode = "greeting") {
     const doc = this.getDocument();
     if (!doc) {
       this.logger.warn("Voice document not ready for result display");
@@ -277,83 +277,127 @@ export class TranslatorUI {
       });
     }
 
-    const isGreeting =
-      result.is_greeting || result.robot_directive?.stop_navigation;
     const sentiment = result.sentiment || {};
     const isRude = sentiment.is_rude || false;
 
-    if (isGreeting && !isRude) {
-      uiAudio.success();
-      hapticManager.pulseBoth(0.8, 80);
-      setTimeout(() => hapticManager.pulseBoth(0.6, 60), 100);
+    if (interpretMode === "reassurance") {
+      // Reassurance mode: check for reassuring/comforting speech
+      const isReassuring =
+        result.intent === "reassuring" ||
+        (sentiment.sentiment === "friendly" && sentiment.score > 0.3);
 
-      if (resultRow)
-        resultRow.setProperties({
-          backgroundColor: "rgba(34, 197, 94, 0.2)",
-          borderColor: "rgba(34, 197, 94, 0.5)",
-        });
-      if (resultText) {
-        resultText.setProperties({
-          text: "Friendly Greeting!",
-          color: "#22c55e",
-        });
+      if (isReassuring) {
+        uiAudio.success();
+        hapticManager.pulseBoth(0.8, 80);
+        setTimeout(() => hapticManager.pulseBoth(0.6, 60), 100);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(34, 197, 94, 0.2)",
+            borderColor: "rgba(34, 197, 94, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Baud feels better!",
+            color: "#22c55e",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#22c55e" });
+        if (statusText) statusText.setProperties({ text: "REASSURING" });
+      } else {
+        uiAudio.notification();
+        hapticManager.pulseBoth(0.3, 30);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(245, 158, 11, 0.2)",
+            borderColor: "rgba(245, 158, 11, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Baud still worried...",
+            color: "#f59e0b",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#f59e0b" });
+        if (statusText) statusText.setProperties({ text: "NON-REASSURING" });
       }
-      if (statusDot) statusDot.setProperties({ backgroundColor: "#22c55e" });
-      if (statusText) statusText.setProperties({ text: "SUCCESS" });
-
-      gameState.setState({
-        friendlyGreetingReceived: true,
-        robotsMovingToGoal: true,
-        robotBehavior: "moving_to_goal",
-      });
-    } else if (isGreeting && isRude) {
-      uiAudio.error();
-      hapticManager.pulseBoth(0.5, 50);
-
-      if (resultRow)
-        resultRow.setProperties({
-          backgroundColor: "rgba(245, 158, 11, 0.2)",
-          borderColor: "rgba(245, 158, 11, 0.5)",
-        });
-      if (resultText)
-        resultText.setProperties({
-          text: "Unfriendly Greeting",
-          color: "#f59e0b",
-        });
-      if (statusDot) statusDot.setProperties({ backgroundColor: "#f59e0b" });
-      if (statusText) statusText.setProperties({ text: "RUDE" });
-    } else if (isRude) {
-      uiAudio.error();
-      hapticManager.pulseBoth(0.5, 50);
-
-      if (resultRow)
-        resultRow.setProperties({
-          backgroundColor: "rgba(239, 68, 68, 0.2)",
-          borderColor: "rgba(239, 68, 68, 0.5)",
-        });
-      if (resultText)
-        resultText.setProperties({
-          text: sentiment.tone_description || "Unfriendly",
-          color: "#ef4444",
-        });
-      if (statusDot) statusDot.setProperties({ backgroundColor: "#ef4444" });
-      if (statusText) statusText.setProperties({ text: "RUDE" });
     } else {
-      uiAudio.notification();
-      hapticManager.pulseBoth(0.3, 30);
+      // Default greeting mode
+      const isGreeting =
+        result.is_greeting || result.robot_directive?.stop_navigation;
 
-      if (resultRow)
-        resultRow.setProperties({
-          backgroundColor: "rgba(239, 68, 68, 0.2)",
-          borderColor: "rgba(239, 68, 68, 0.5)",
+      if (isGreeting && !isRude) {
+        uiAudio.success();
+        hapticManager.pulseBoth(0.8, 80);
+        setTimeout(() => hapticManager.pulseBoth(0.6, 60), 100);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(34, 197, 94, 0.2)",
+            borderColor: "rgba(34, 197, 94, 0.5)",
+          });
+        if (resultText) {
+          resultText.setProperties({
+            text: "Friendly Greeting!",
+            color: "#22c55e",
+          });
+        }
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#22c55e" });
+        if (statusText) statusText.setProperties({ text: "SUCCESS" });
+
+        gameState.setState({
+          friendlyGreetingReceived: true,
+          robotsMovingToGoal: true,
+          robotBehavior: "moving_to_goal",
         });
-      if (resultText)
-        resultText.setProperties({
-          text: "Non-greeting",
-          color: "#ef4444",
-        });
-      if (statusDot) statusDot.setProperties({ backgroundColor: "#ef4444" });
-      if (statusText) statusText.setProperties({ text: "TRY AGAIN" });
+      } else if (isGreeting && isRude) {
+        uiAudio.error();
+        hapticManager.pulseBoth(0.5, 50);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(245, 158, 11, 0.2)",
+            borderColor: "rgba(245, 158, 11, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Unfriendly Greeting",
+            color: "#f59e0b",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#f59e0b" });
+        if (statusText) statusText.setProperties({ text: "RUDE" });
+      } else if (isRude) {
+        uiAudio.error();
+        hapticManager.pulseBoth(0.5, 50);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(239, 68, 68, 0.2)",
+            borderColor: "rgba(239, 68, 68, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: sentiment.tone_description || "Unfriendly",
+            color: "#ef4444",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#ef4444" });
+        if (statusText) statusText.setProperties({ text: "RUDE" });
+      } else {
+        uiAudio.notification();
+        hapticManager.pulseBoth(0.3, 30);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(239, 68, 68, 0.2)",
+            borderColor: "rgba(239, 68, 68, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Non-greeting",
+            color: "#ef4444",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#ef4444" });
+        if (statusText) statusText.setProperties({ text: "TRY AGAIN" });
+      }
     }
 
     const buttonLetter = doc.getElementById("button-letter");
