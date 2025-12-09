@@ -61,6 +61,10 @@ export class ThumbTapRenderer {
     return this._ready;
   }
 
+  preload() {
+    loadSharedTexture(() => {});
+  }
+
   create(parent) {
     if (this.mesh) {
       this.mesh.visible = true;

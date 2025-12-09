@@ -373,7 +373,9 @@ export class CallPanelUI {
       // Once mesh exists, ensure it's visible
       if (this.viseme.mesh && !this.viseme.mesh.visible) {
         this.viseme.show();
-        this.logger.log(`Viseme shown (deferred), alpha=${this._visemeOpacity}`);
+        this.logger.log(
+          `Viseme shown (deferred), alpha=${this._visemeOpacity}`
+        );
       }
 
       this._hologramTime += deltaTime;

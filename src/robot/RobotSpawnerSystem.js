@@ -123,6 +123,7 @@ export class RobotSpawnerSystem extends createSystem({}) {
       renderOrder: 9020,
       position: { x: 0, y: 0, z: 0.02 },
     });
+    this._thumbTap.preload();
 
     // Panel fade animation (like CallPanelUI)
     this._fadeProgress = 0;
@@ -1359,7 +1360,8 @@ export class RobotSpawnerSystem extends createSystem({}) {
     const inPortalPlacement =
       currentGameState.currentState === GAME_STATES.PORTAL_PLACEMENT &&
       !currentGameState.robotsActive &&
-      !currentGameState.roomSetupRequired;
+      !currentGameState.roomSetupRequired &&
+      !currentGameState.portalPlacementStarted;
 
     // Debug: log state changes affecting VFX
     if (this._lastInPortalPlacement !== inPortalPlacement) {
@@ -1551,7 +1553,7 @@ export class RobotSpawnerSystem extends createSystem({}) {
             gameState.setState({
               portalSpawnPosition: {
                 x: portalPos.x,
-                y: portalPos.y,
+                y: portalPos.y + 0.075,
                 z: portalPos.z,
               },
               robotBehavior: "gathered",
@@ -1785,7 +1787,7 @@ export class RobotSpawnerSystem extends createSystem({}) {
       robotsActive: true,
       portalSpawnPosition: {
         x: position.x,
-        y: position.y,
+        y: position.y + 0.075,
         z: position.z,
       },
       robotBehavior: targetBehavior,
