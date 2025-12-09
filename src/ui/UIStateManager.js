@@ -159,6 +159,11 @@ export class UIStateManager {
 
       // setState handles deduplication internally
       this.wristUI.setState(targetState);
+
+      // Handle world vs HUD call panel preference
+      if (config?.useHUDCallPanel && this.wristUI.switchToHUDCallPanel) {
+        this.wristUI.switchToHUDCallPanel();
+      }
     }
 
     // Handle custom panels

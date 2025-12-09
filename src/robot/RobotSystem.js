@@ -60,6 +60,7 @@ import { RobotArmManager, ArmState } from "./RobotArmManager.js";
 import { RobotTieManager } from "./RobotTieManager.js";
 import { gameState } from "../gameState.js";
 import { setMasterVolume } from "../audio/audioContext.js";
+import { PortalAudio } from "../audio/PortalAudio.js";
 import { RobotEngineThrustVFX } from "../vfx/RobotEngineThrustVFX.js";
 import { RobotScanManager } from "./RobotScanManager.js";
 import { RobotAudioManager } from "./RobotAudioManager.js";
@@ -1168,6 +1169,35 @@ export class RobotSystem extends createSystem({}) {
         const wristUI = this.world.aiManager?.wristUI;
         this.startPanicMinigame(wristUI);
       }
+
+      // When Modem should approach the player (after entropod minigame complete)
+      if (newState.modemApproaching && !oldState.modemApproaching) {
+        this.logger.log("Modem approaching player");
+        this._triggerModemApproach();
+      }
+
+      // When robots should exit (game ending)
+      if (
+        newState.robotBehavior === "exiting" &&
+        oldState.robotBehavior !== "exiting"
+      ) {
+        this.logger.log("Game ending - robots exiting through portal");
+        this.logger.log(
+          `  modemStays=${
+            newState.modemStays
+          }, portalSpawnPosition=${JSON.stringify(
+            newState.portalSpawnPosition
+          )}`
+        );
+        this._triggerRobotExit(newState.modemStays);
+      }
+
+      // Debug: log gameEnding changes
+      if (newState.gameEnding !== oldState.gameEnding) {
+        this.logger.log(
+          `gameEnding changed: ${oldState.gameEnding} -> ${newState.gameEnding}`
+        );
+      }
     });
   }
 
@@ -1188,6 +1218,376 @@ export class RobotSystem extends createSystem({}) {
 
   onGoalReached(callback) {
     this.navigationManager.onGoalReached(callback);
+  }
+
+  /**
+   * Trigger Modem to approach the player with questioning behavior
+   * Called after entropod minigame completes
+   */
+  _triggerModemApproach() {
+    const result = this.characterManager?.getByName("Modem");
+    if (!result) {
+      this.logger.warn("Cannot find Modem for approach");
+      return;
+    }
+
+    const { entityIndex } = result;
+    const state = this.robotStates?.get(entityIndex);
+
+    // Exclude Modem from robot-robot interactions during approach
+    this.interactionManager?.setExcluded(entityIndex, true);
+    this.logger.log("Modem excluded from robot interactions during approach");
+
+    // Make Modem look at player
+    const player = this.world?.player;
+    const playerPos = player?.head?.getWorldPosition?.(new Vector3());
+    if (playerPos && state) {
+      state.lookAtTarget = playerPos.clone();
+      state.lookAtStartTime = performance.now();
+      state.lookAtDuration = 2000; // Look for 2 seconds before moving
+    }
+
+    // Set curious face and play inquisitive voice
+    this.setRobotFaceEmotion(entityIndex, "curious");
+    const voice = this.audioManager?.getVoice(entityIndex);
+    if (voice) voice.inquisitive?.();
+
+    // After looking, navigate to player
+    setTimeout(() => {
+      this.playerInteractionManager?.summonRobot(entityIndex);
+
+      // Store entity index for later use
+      this._modemEntityIndex = entityIndex;
+
+      // Track if arrival already triggered
+      let arrivalTriggered = false;
+
+      const triggerArrival = (reason) => {
+        if (arrivalTriggered) return;
+        arrivalTriggered = true;
+        clearInterval(checkArrival);
+
+        this.logger.log(`Modem arrival triggered: ${reason}`);
+
+        // Play another questioning voice when arrived
+        if (voice) voice.inquisitive?.();
+        this.setRobotFaceEmotion(entityIndex, "curious");
+
+        // Keep Modem looking at player (refresh player position)
+        const freshPlayerPos = player?.head?.getWorldPosition?.(new Vector3());
+        const pState = this.robotStates?.get(entityIndex);
+        if (pState && freshPlayerPos) {
+          pState.lookAtTarget = freshPlayerPos.clone();
+          pState.lookAtDuration = 60000;
+        }
+
+        gameState.setState({
+          modemApproaching: false,
+          modemArrived: true,
+        });
+      };
+
+      // Set up callback for when Modem reaches player
+      const checkArrival = setInterval(() => {
+        const agentId = this.robotAgentIds?.get(entityIndex);
+        const agent =
+          agentId !== undefined ? this.agents?.agents?.[agentId] : null;
+
+        // Check if agent reached target (STATE_IDLE = 0)
+        if (agent && agent.state === 0) {
+          triggerArrival("reached target");
+          return;
+        }
+
+        // Also check proximity as fallback (within 0.8m of player)
+        const robotEntity = this.robotEntities.get(entityIndex);
+        const robotPos = robotEntity?.object3D?.position;
+        const currentPlayerPos = player?.head?.getWorldPosition?.(
+          new Vector3()
+        );
+        if (robotPos && currentPlayerPos) {
+          const dx = robotPos.x - currentPlayerPos.x;
+          const dz = robotPos.z - currentPlayerPos.z;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < 0.64) {
+            // 0.8m squared
+            triggerArrival("proximity check");
+          }
+        }
+      }, 500);
+
+      // Safety timeout - trigger arrival anyway to prevent game getting stuck
+      setTimeout(() => {
+        if (!arrivalTriggered) {
+          this.logger.warn(
+            "Modem approach timeout - forcing arrival to continue game"
+          );
+          triggerArrival("timeout fallback");
+        }
+      }, 15000);
+    }, 2000);
+  }
+
+  /**
+   * Called when Modem stay question is answered
+   */
+  _handleModemStayResponse(isYes) {
+    const entityIndex = this._modemEntityIndex;
+    if (entityIndex === undefined) return;
+
+    const voice = this.audioManager?.getVoice(entityIndex);
+
+    if (isYes) {
+      // Happy reaction - Modem can stay!
+      this.setRobotFaceEmotion(entityIndex, "excited");
+      if (voice) voice.happy?.();
+      this.interactionManager?.triggerSoloAnimation(entityIndex, "happyBounce");
+    } else {
+      // Sad reaction
+      this.setRobotFaceEmotion(entityIndex, "sad");
+      if (voice) voice.sad?.();
+    }
+
+    // Clear look at target
+    const state = this.robotStates?.get(entityIndex);
+    if (state) {
+      state.lookAtTarget = null;
+    }
+
+    // Resume wandering after a moment
+    setTimeout(() => {
+      this.setRobotFaceEmotion(entityIndex, "content");
+    }, 3000);
+  }
+
+  /**
+   * Trigger robot exit sequence - robots navigate to spawn portal and exit
+   * @param {boolean} modemStays - If true, Modem stays while Blit and Baud exit
+   */
+  _triggerRobotExit(modemStays) {
+    this.logger.log(`_triggerRobotExit called with modemStays=${modemStays}`);
+    const state = gameState.getState();
+    let portalPos = state.portalSpawnPosition;
+
+    // Fallback: if no portal position (debug spawn), use first robot's position
+    if (!portalPos) {
+      this.logger.warn(
+        "No portal spawn position - using first robot position as fallback"
+      );
+      for (const [entityIndex] of this.robotAgentIds.entries()) {
+        const robotEntity = this.robotEntities.get(entityIndex);
+        if (robotEntity?.object3D) {
+          const pos = robotEntity.object3D.position;
+          portalPos = { x: pos.x, y: pos.y, z: pos.z };
+          this.logger.log(
+            `Using robot ${entityIndex} position: ${JSON.stringify(portalPos)}`
+          );
+          break;
+        }
+      }
+    }
+
+    if (!portalPos) {
+      this.logger.warn(
+        "No portal spawn position and no robots found - cannot proceed!"
+      );
+      return;
+    }
+    this.logger.log(`Exit portal position: ${JSON.stringify(portalPos)}`);
+
+    const exitPosition = new Vector3(portalPos.x, portalPos.y, portalPos.z);
+
+    // Determine which robots should exit
+    const robotsToExit = [];
+    const modemResult = this.characterManager?.getByName("Modem");
+    const blitResult = this.characterManager?.getByName("Blit");
+    const baudResult = this.characterManager?.getByName("Baud");
+
+    if (blitResult) robotsToExit.push(blitResult.entityIndex);
+    if (baudResult) robotsToExit.push(baudResult.entityIndex);
+    if (!modemStays && modemResult) robotsToExit.push(modemResult.entityIndex);
+
+    this.logger.log(
+      `Exit sequence: ${robotsToExit.length} robots exiting, modemStays=${modemStays}`
+    );
+
+    // Make exiting robots happy and navigate to portal
+    for (const entityIndex of robotsToExit) {
+      this.setRobotFaceEmotion(entityIndex, "excited");
+      const voice = this.audioManager?.getVoice(entityIndex);
+      if (voice) {
+        setTimeout(() => voice.happy?.(), Math.random() * 500);
+      }
+    }
+
+    // Store exit state
+    this._exitingRobots = new Set(robotsToExit);
+    this._exitPosition = exitPosition;
+    this._modemStays = modemStays;
+
+    // Set goal to portal position for exiting robots
+    this.navigationManager.setGoal(exitPosition);
+
+    // Check periodically if exiting robots have reached the portal
+    const checkExitArrival = setInterval(() => {
+      let allArrived = true;
+      for (const entityIndex of robotsToExit) {
+        const agentId = this.robotAgentIds?.get(entityIndex);
+        if (agentId === undefined) continue;
+        const agent = this.agents?.agents?.[agentId];
+        if (!agent || agent.state !== 0) {
+          // STATE_IDLE = 0 = at target
+          allArrived = false;
+          break;
+        }
+      }
+
+      if (allArrived) {
+        clearInterval(checkExitArrival);
+        this.logger.log("Exiting robots reached portal position");
+        this._createExitPortal(exitPosition, robotsToExit);
+      }
+    }, 500);
+
+    // Safety timeout
+    setTimeout(() => clearInterval(checkExitArrival), 30000);
+
+    // If Modem stays, make them happy and continue wandering
+    if (modemStays && modemResult) {
+      const modemIndex = modemResult.entityIndex;
+      this.setRobotFaceEmotion(modemIndex, "excited");
+      const voice = this.audioManager?.getVoice(modemIndex);
+      if (voice) voice.happy?.();
+
+      // Modem does a happy bounce and continues wandering
+      this.interactionManager?.triggerSoloAnimation(modemIndex, "happyBounce");
+
+      // After a moment, resume wandering
+      setTimeout(() => {
+        this.setRobotFaceEmotion(modemIndex, "content");
+        const robotEntity = this.robotEntities?.get(modemIndex);
+        const agentId = this.robotAgentIds?.get(modemIndex);
+        if (robotEntity && agentId !== undefined) {
+          this.navigationManager?.selectRandomWanderTarget(
+            robotEntity,
+            agentId
+          );
+        }
+      }, 2000);
+    }
+  }
+
+  /**
+   * Create exit portal and animate robots jumping through
+   */
+  _createExitPortal(position, robotsToExit) {
+    this.logger.log(
+      `_createExitPortal called at ${JSON.stringify(position)} for ${
+        robotsToExit.length
+      } robots`
+    );
+
+    // Create exit portal VFX
+    const portalHandle = this.world.vfxManager?.createPortal({
+      position: position,
+      config: {
+        maxRadius: 0.6,
+        primaryColor: 0x00ffff,
+        secondaryColor: 0x0088ff,
+        glowIntensity: 1.2,
+      },
+    });
+
+    // Create portal audio
+    const portalAudio = new PortalAudio();
+    portalAudio.setPosition(position.x, position.y, position.z);
+    portalAudio.startEntrance();
+
+    // Animate robots descending into portal one by one
+    let exitDelay = 1000; // Start after portal opens
+    for (const entityIndex of robotsToExit) {
+      setTimeout(() => {
+        this._animateRobotExit(entityIndex, position);
+      }, exitDelay);
+      exitDelay += 800; // Stagger exits
+    }
+
+    // Close portal after all robots exit
+    setTimeout(() => {
+      if (portalHandle) {
+        portalHandle.dispose();
+      }
+      portalAudio?.stop();
+
+      // Clear exit state
+      this._exitingRobots = null;
+      this._exitPosition = null;
+
+      // If all robots exited, game is complete
+      if (!this._modemStays) {
+        gameState.setState({ robotsActive: false });
+      }
+    }, exitDelay + 2000);
+  }
+
+  /**
+   * Animate a single robot descending into the exit portal
+   */
+  _animateRobotExit(entityIndex, portalPosition) {
+    const robotState = this.robotStates?.get(entityIndex);
+    const robotEntity = this.robotEntities?.get(entityIndex);
+
+    if (!robotState || !robotEntity) return;
+
+    // Play excited sound
+    const voice = this.audioManager?.getVoice(entityIndex);
+    if (voice) voice.happy?.();
+
+    // Trigger jump animation
+    this.interactionManager?.triggerSoloAnimation(entityIndex, "happyBounce");
+
+    // Animate robot descending into portal
+    const startY = robotState.group?.position?.y || 0.5;
+    const startTime = performance.now();
+    const duration = 1000;
+
+    const animateDescend = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      if (robotState.group) {
+        // Ease-in descent
+        const easeProgress = progress * progress;
+        robotState.group.position.y =
+          startY * (1 - easeProgress) - 0.5 * easeProgress;
+
+        // Scale down as robot descends
+        const scale = 1 - easeProgress * 0.8;
+        robotState.group.scale.setScalar(scale);
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(animateDescend);
+      } else {
+        // Robot fully exited - hide and clean up
+        if (robotState.group) {
+          robotState.group.visible = false;
+        }
+
+        // Remove from navigation
+        const agentId = this.robotAgentIds?.get(entityIndex);
+        if (agentId !== undefined && this.agents) {
+          this.agents.removeAgent(agentId);
+        }
+
+        // Hide nametag
+        this.characterManager?.hideNameTag(entityIndex);
+
+        this.logger.log(`Robot ${entityIndex} exited through portal`);
+      }
+    };
+
+    animateDescend();
   }
 
   /**

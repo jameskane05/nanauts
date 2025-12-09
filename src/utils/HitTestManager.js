@@ -70,8 +70,21 @@ export class HitTestManager {
       if (this.xrSession && !this.hitTestInitialized) {
         this.initializeHitTestSources(this.xrSession);
       }
+      // Also setup controller sources if they don't exist yet
+      // (they may not have been created if we were disabled during initial setup)
+      if (this.xrSession && this._hasNoHitTestSources()) {
+        this._setupControllerHitTestSources(this.xrSession);
+      }
     }
     this.logger.log(`HitTestManager enabled: ${enabled}`);
+  }
+
+  _hasNoHitTestSources() {
+    return (
+      !this.hitTestSources.left &&
+      !this.hitTestSources.right &&
+      !this.hitTestSources.none
+    );
   }
 
   _cancelAllHitTestSources() {

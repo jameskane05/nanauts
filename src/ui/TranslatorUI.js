@@ -320,6 +320,76 @@ export class TranslatorUI {
         if (statusDot) statusDot.setProperties({ backgroundColor: "#f59e0b" });
         if (statusText) statusText.setProperties({ text: "NON-REASSURING" });
       }
+    } else if (interpretMode === "modem_stay") {
+      // Modem stay mode: check for yes/no/non-answer using transcription patterns
+      // (must match AIManager's pattern matching logic)
+      const transcription = (
+        result.corrected_transcription ||
+        result.transcription ||
+        ""
+      ).toLowerCase();
+      // Expanded patterns to catch more natural responses
+      const yesPatterns =
+        /\b(yes|yeah|yep|yup|sure|okay|ok|of course|absolutely|definitely|please|stay|welcome|friend|can stay|love to|i'd love|would love|happy to|gladly)\b/i;
+      const noPatterns =
+        /\b(no|nope|nah|sorry|leave|go away|goodbye|bye|can't stay|cannot stay|have to go|must go|go home)\b/i;
+      const isYes = yesPatterns.test(transcription);
+      const isNo = noPatterns.test(transcription);
+
+      this.logger.log(
+        `Modem stay UI check - transcription: "${transcription}", isYes: ${isYes}, isNo: ${isNo}`
+      );
+
+      if (isYes) {
+        uiAudio.success();
+        hapticManager.pulseBoth(0.8, 80);
+        setTimeout(() => hapticManager.pulseBoth(0.6, 60), 100);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(34, 197, 94, 0.2)",
+            borderColor: "rgba(34, 197, 94, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Modem can stay!",
+            color: "#22c55e",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#22c55e" });
+        if (statusText) statusText.setProperties({ text: "YES" });
+      } else if (isNo) {
+        uiAudio.notification();
+        hapticManager.pulseBoth(0.5, 50);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(245, 158, 11, 0.2)",
+            borderColor: "rgba(245, 158, 11, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Modem must go...",
+            color: "#f59e0b",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#f59e0b" });
+        if (statusText) statusText.setProperties({ text: "NO" });
+      } else {
+        uiAudio.notification();
+        hapticManager.pulseBoth(0.3, 30);
+
+        if (resultRow)
+          resultRow.setProperties({
+            backgroundColor: "rgba(100, 100, 100, 0.2)",
+            borderColor: "rgba(150, 150, 150, 0.5)",
+          });
+        if (resultText)
+          resultText.setProperties({
+            text: "Yes or no?",
+            color: "#9ca3af",
+          });
+        if (statusDot) statusDot.setProperties({ backgroundColor: "#9ca3af" });
+        if (statusText) statusText.setProperties({ text: "NON-ANSWER" });
+      }
     } else {
       // Default greeting mode
       const isGreeting =

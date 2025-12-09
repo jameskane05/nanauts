@@ -451,6 +451,223 @@ export const dialogTracks = {
     },
   },
 
+  // Entropod minigame dialogs
+  entropodFirst: {
+    id: "entropodFirst",
+    audio: "./audio/dialog/12_for-the-love-of-higgs-boson.mp3",
+    captions: [
+      { text: "For the love of Higgs boson,", duration: 1.96 },
+      {
+        text: "protects the boss at all cost!",
+        startTime: 1.98,
+        duration: 2.72,
+      },
+      {
+        text: "Place a portal beneath the Entropods",
+        startTime: 5.38,
+        duration: 2.1,
+      },
+      {
+        text: "and they'll be hoovered into it! Gone!",
+        startTime: 7.48,
+        duration: 2.64,
+      },
+    ],
+    criteria: {
+      firstEntropodSpawned: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 70,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({ firstEntropodSpawned: false });
+    },
+  },
+
+  entropodComplete: {
+    id: "entropodComplete",
+    audio: "./audio/dialog/13_youve-done-it.mp3",
+    captions: [
+      { text: "You've done it!", duration: 2.28 },
+      {
+        text: "The nanobots have collected all the data they need.",
+        startTime: 2.8,
+        duration: 3.42,
+      },
+      {
+        text: "This will advance intergalactic relations by milliseconds.",
+        startTime: 7.16,
+        duration: 3.92,
+      },
+      { text: "Thank you, Ambassador.", startTime: 12.6, duration: 1.16 },
+      {
+        text: "Modem has something he wishes to say.",
+        startTime: 16.6,
+        duration: 2.56,
+      },
+    ],
+    criteria: {
+      entropodMinigameCompleted: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 75,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({
+        entropodMinigameCompleted: false,
+        modemApproaching: true,
+      });
+    },
+  },
+
+  // Modem wants to know if he can stay - plays when Modem reaches player
+  modemQuestion: {
+    id: "modemQuestion",
+    audio: "./audio/dialog/14_ah-he-wants-to-know.mp3",
+    captions: [
+      { text: "Ah,", duration: 1.56 },
+      {
+        text: "he wants to know if he can stay and be friends,",
+        startTime: 2.8,
+        duration: 5.0,
+      },
+      {
+        text: "well what do you say, up to you ambassador.",
+        startTime: 7.8,
+        duration: 5.36,
+      },
+    ],
+    criteria: {
+      modemArrived: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 75,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({
+        modemArrived: false,
+        voiceInputEnabled: true,
+        interpretMode: "modem_stay",
+      });
+    },
+  },
+
+  // Modem stay - positive response (YES)
+  modemStayYes: {
+    id: "modemStayYes",
+    audio: "./audio/dialog/15_incredible-i-know-youll-care.mp3",
+    captions: [
+      {
+        text: "Incredible! I know you'll care for this nanaut as your own.",
+        startTime: 0.88,
+        duration: 4.56,
+      },
+    ],
+    criteria: {
+      modemStayResult: "yes",
+    },
+    autoPlay: true,
+    once: true,
+    priority: 80,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({
+        modemStayResult: null,
+        voiceInputEnabled: false,
+        interpretMode: "greeting",
+        gameEnding: true,
+        modemStays: true,
+      });
+    },
+  },
+
+  // Modem stay - negative response (NO)
+  modemStayNo: {
+    id: "modemStayNo",
+    audio: "./audio/dialog/15_well-they-understand.mp3",
+    captions: [
+      { text: "Well, they understand.", duration: 2.44 },
+      { text: "It's for the best.", startTime: 2.98, duration: 0.82 },
+    ],
+    criteria: {
+      modemStayResult: "no",
+    },
+    autoPlay: true,
+    once: true,
+    priority: 80,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      gameState.setState({
+        modemStayResult: null,
+        voiceInputEnabled: false,
+        interpretMode: "greeting",
+        gameEnding: true,
+        modemStays: false,
+      });
+    },
+  },
+
+  // Modem stay - non-answer (keeps waiting)
+  modemStayNonAnswer: {
+    id: "modemStayNonAnswer",
+    audio: "./audio/dialog/15_thats-not-really-an-answer.mp3",
+    captions: [
+      { text: "That's not really an answer.", startTime: 0.86, duration: 1.84 },
+      {
+        text: "Can they stay with you from now on?",
+        startTime: 3.64,
+        duration: 1.7,
+      },
+    ],
+    criteria: {
+      modemStayResult: "non_answer",
+    },
+    autoPlay: true,
+    once: false, // Can play multiple times
+    priority: 80,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      // Clear the result but keep voice input enabled - waiting for real answer
+      gameState.setState({
+        modemStayResult: null,
+      });
+    },
+  },
+
+  // Game outro - robots exit through portal
+  gameOutro: {
+    id: "gameOutro",
+    audio: "./audio/dialog/16_come-on-bots.mp3",
+    captions: [
+      { text: "Come on, bots!", duration: 1.5 },
+      {
+        text: "Thank you again for your efforts on behalf of Interstellar Understanding,",
+        startTime: 1.34,
+        duration: 6.74,
+      },
+      { text: "Ambassador. Till next time!", startTime: 8.32, duration: 2.5 },
+    ],
+    criteria: {
+      gameEnding: true,
+    },
+    autoPlay: true,
+    once: true,
+    priority: 85,
+    showCallPanel: true,
+    onComplete: (gameState) => {
+      console.log(
+        "[Dialog] gameOutro onComplete - setting robotBehavior: exiting"
+      );
+      gameState.setState({
+        gameEnding: false,
+        robotBehavior: "exiting",
+      });
+    },
+  },
+
   panicCalmedSecond: {
     id: "panicCalmedSecond",
     audio: "./audio/dialog/08-such-a-cutie.mp3",

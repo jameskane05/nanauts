@@ -1813,6 +1813,60 @@ export class RobotSpawnerSystem extends createSystem({}) {
     if (debugState?.startPanicMinigame && robotSystemRef) {
       this.logger.log("Debug spawn: starting panic minigame");
       robotSystemRef.startPanicMinigame(wristUI);
+    } else if (debugState?.entropodMinigame) {
+      // Entropod minigame uses HUD call panel, not world panel
+      this.logger.log(
+        "Debug spawn: entropod minigame active, skipping world call panel"
+      );
+    } else if (
+      debugState?.modemArrived ||
+      debugState?.interpretMode === "modem_stay"
+    ) {
+      // Modem stay question uses HUD call panel - handled by UIStateConfig.useHUDCallPanel
+      this.logger.log(
+        "Debug spawn: modem stay state active, UIStateManager handles call panel"
+      );
+
+      // Make Modem look at player with curious expression - delay to ensure robot is registered
+      setTimeout(() => {
+        if (!robotSystemRef) return;
+        const modemResult = robotSystemRef.characterManager?.getByName("Modem");
+        if (!modemResult) {
+          this.logger.warn("Debug spawn: Could not find Modem");
+          return;
+        }
+
+        const { entityIndex } = modemResult;
+        const player = this.world?.player;
+        const playerPos = player?.head?.getWorldPosition?.(new Vector3());
+
+        // Stop navigation and force ATTENDING_PLAYER state (state 5)
+        robotSystemRef.navigationManager?.stopRobotMovement(entityIndex);
+        robotSystemRef.stateMachine?.forceState(entityIndex, 5);
+
+        // Set Modem to look at player
+        const state = robotSystemRef.robotStates?.get(entityIndex);
+        if (state && playerPos) {
+          state.lookAtTarget = playerPos.clone();
+          state.lookAtStartTime = performance.now();
+          state.lookAtDuration = 60000;
+        }
+
+        // Curious face and inquisitive voice
+        robotSystemRef.setRobotFaceEmotion?.(entityIndex, "curious");
+        const voice = robotSystemRef.audioManager?.getVoice(entityIndex);
+        if (voice) voice.inquisitive?.();
+
+        // Exclude from robot interactions
+        robotSystemRef.interactionManager?.setExcluded(entityIndex, true);
+
+        // Store for later use
+        robotSystemRef._modemEntityIndex = entityIndex;
+
+        this.logger.log(
+          "Debug spawn: Modem stopped, looking at player with curious expression"
+        );
+      }, 1000);
     } else if (wristUI) {
       // Move call panel to hover above robots (professor watches them)
       const surfaceNormal = new Vector3(0, 1, 0); // Assume floor for debug spawn

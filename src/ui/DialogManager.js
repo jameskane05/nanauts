@@ -272,22 +272,61 @@ export class DialogManager {
       }
 
       // Check for any relevant state changes (not just currentState)
+      // NOTE: Must include ALL keys used in dialogData.js criteria!
       const relevantChanges =
         newState?.currentState !== oldState?.currentState ||
+        newState?.roomSetupRequired !== oldState?.roomSetupRequired ||
         newState?.robotsActive !== oldState?.robotsActive ||
         newState?.robotBehavior !== oldState?.robotBehavior ||
         newState?.introPlayed !== oldState?.introPlayed ||
+        newState?.portalPlacementPlayed !== oldState?.portalPlacementPlayed ||
+        newState?.ambassadorPresentationPlayed !==
+          oldState?.ambassadorPresentationPlayed ||
         newState?.greetingResult !== oldState?.greetingResult ||
         newState?.firstCalmCompleted !== oldState?.firstCalmCompleted ||
         newState?.secondCalmCompleted !== oldState?.secondCalmCompleted ||
         newState?.thirdCalmCompleted !== oldState?.thirdCalmCompleted ||
         newState?.panicMinigameCompleted !== oldState?.panicMinigameCompleted ||
-        newState?.reassuranceResult !== oldState?.reassuranceResult;
+        newState?.reassuranceResult !== oldState?.reassuranceResult ||
+        newState?.firstEntropodSpawned !== oldState?.firstEntropodSpawned ||
+        newState?.entropodMinigameCompleted !==
+          oldState?.entropodMinigameCompleted ||
+        newState?.modemApproaching !== oldState?.modemApproaching ||
+        newState?.modemArrived !== oldState?.modemArrived ||
+        newState?.modemStayResult !== oldState?.modemStayResult ||
+        newState?.voiceInputEnabled !== oldState?.voiceInputEnabled ||
+        newState?.gameEnding !== oldState?.gameEnding;
 
       if (relevantChanges) {
-        this.logger.log(
-          `State changed - greetingResult: ${oldState?.greetingResult} -> ${newState?.greetingResult}`
-        );
+        // Log relevant state changes for debugging
+        if (
+          newState?.entropodMinigameCompleted !==
+          oldState?.entropodMinigameCompleted
+        ) {
+          this.logger.log(
+            `entropodMinigameCompleted: ${oldState?.entropodMinigameCompleted} -> ${newState?.entropodMinigameCompleted}`
+          );
+        }
+        if (newState?.modemArrived !== oldState?.modemArrived) {
+          this.logger.log(
+            `modemArrived: ${oldState?.modemArrived} -> ${newState?.modemArrived}`
+          );
+        }
+        if (newState?.voiceInputEnabled !== oldState?.voiceInputEnabled) {
+          this.logger.log(
+            `voiceInputEnabled: ${oldState?.voiceInputEnabled} -> ${newState?.voiceInputEnabled}`
+          );
+        }
+        if (newState?.gameEnding !== oldState?.gameEnding) {
+          this.logger.log(
+            `gameEnding: ${oldState?.gameEnding} -> ${newState?.gameEnding}`
+          );
+        }
+        if (newState?.modemStayResult !== oldState?.modemStayResult) {
+          this.logger.log(
+            `modemStayResult: ${oldState?.modemStayResult} -> ${newState?.modemStayResult}`
+          );
+        }
         this._checkAutoPlayDialogs(newState);
       }
     };

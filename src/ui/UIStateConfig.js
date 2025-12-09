@@ -146,6 +146,19 @@ export const UI_STATE_CONFIG = {
     priority: 50,
     wristUIState: WRIST_UI_STATE.VOICE_INPUT,
   },
+
+  // Voice input for Modem stay question (works with robots active)
+  [UI_PANELS.VOICE_INPUT + "_modem"]: {
+    showWhen: {
+      currentState: { $gte: GAME_STATES.XR_ACTIVE },
+      roomSetupRequired: false,
+      voiceInputEnabled: true,
+      interpretMode: "modem_stay",
+    },
+    priority: 55, // Higher than normal voice input
+    wristUIState: WRIST_UI_STATE.VOICE_INPUT,
+    useHUDCallPanel: true, // Force HUD call panel, hide world panel
+  },
 };
 
 /**

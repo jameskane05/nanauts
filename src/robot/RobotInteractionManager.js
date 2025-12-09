@@ -59,6 +59,9 @@ export class RobotInteractionManager {
     // Interaction state per robot (keyed by entity index)
     this.interactionState = new Map();
 
+    // Robots excluded from interactions (e.g., during special sequences)
+    this.excludedRobots = new Set();
+
     // Active interaction pairs (to coordinate between two robots)
     this.activeInteractions = new Map(); // interactionId -> { robotA, robotB, phase, ... }
     this._nextInteractionId = 0;
@@ -252,6 +255,10 @@ export class RobotInteractionManager {
 
         const stateA = this.getState(indexA);
         const stateB = this.getState(indexB);
+
+        // Skip if either robot is excluded from interactions
+        if (this.excludedRobots.has(indexA) || this.excludedRobots.has(indexB))
+          continue;
 
         // Skip if either robot is already in an interaction
         if (stateA.interactionId !== null || stateB.interactionId !== null)
@@ -1365,6 +1372,19 @@ export class RobotInteractionManager {
   shouldPauseMovement(entityIndex) {
     const state = this.interactionState.get(entityIndex);
     return state?.isPaused === true;
+  }
+
+  /**
+   * Exclude a robot from interactions (e.g., during special sequences).
+   */
+  setExcluded(entityIndex, excluded = true) {
+    if (excluded) {
+      this.excludedRobots.add(entityIndex);
+      this.logger.log(`Robot ${entityIndex} excluded from interactions`);
+    } else {
+      this.excludedRobots.delete(entityIndex);
+      this.logger.log(`Robot ${entityIndex} re-included in interactions`);
+    }
   }
 
   /**

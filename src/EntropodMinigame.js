@@ -16,10 +16,15 @@ import {
   Line,
   Group,
   SphereGeometry,
-  MeshBasicMaterial,
+  MeshStandardMaterial,
   Mesh,
   Matrix4,
   Quaternion,
+  CanvasTexture,
+  Color,
+  Float32BufferAttribute,
+  Points,
+  PointsMaterial,
 } from "three";
 import { Logger } from "./utils/Logger.js";
 import { gameState, GAME_STATES } from "./gameState.js";
@@ -39,8 +44,12 @@ export class EntropodMinigame {
     this.pathLine = null;
     this.pathLength = 0;
 
-    // Moving sphere (entropod)
-    this.sphere = null;
+    // Moving entropod (snake-like creature)
+    this.sphere = null; // Head sphere (for compatibility)
+    this.segments = []; // All segments including head
+    this.segmentCount = 6; // Head + 5 body segments
+    this.segmentSpacing = 0.12; // Distance between segment centers
+    this.headRadius = 0.08;
     this.distanceTraveled = 0;
     this.speed = 1.0; // meters per second
 
@@ -52,14 +61,25 @@ export class EntropodMinigame {
     this.nextEntropyTime = 0;
     this.onScoreUpdate = null;
     this.onMinigameComplete = null;
+    this._firstEntropyPlayed = false;
 
     // Path generation config
     this.config = {
-      margin: 0.4, // Inset from walls
+      margin: 0.6, // Inset from walls
       minHeight: 0.8,
       maxHeight: 1.8,
       numControlPoints: 12,
       pathSegments: 100,
+    };
+
+    // Randomized path parameters (regenerated each spawn)
+    this._pathVariation = {
+      pattern: 0, // 0=figure8, 1=oval, 2=trefoil
+      scale: 0.6,
+      rotation: 0,
+      heightAmp: 0.5,
+      tension: 0.3,
+      startOffset: 0,
     };
 
     // Portal state
@@ -67,10 +87,22 @@ export class EntropodMinigame {
     this.portalOpenDuration = 1.0;
     this.portalHoldDuration = 3.0; // How long portal stays open
     this.portalCloseDuration = 0.8;
-    this.vacuumRadius = 4.0; // Start pulling at 4m (debug)
+    this.vacuumRadius = 4.0; // Horizontal pull radius (xz plane)
+    this.vacuumHeight = 6.0; // Vertical pull height (y axis)
     this.captureRadius = 0.15; // Capture threshold
     this.vacuumStrength = 3.0; // Pull force multiplier
     this._savedOnEnvironmentSelect = null; // Store original callback
+
+    // Placement line VFX (from hand to hit point)
+    this._placementLine = null;
+    this._placementLineParticles = null;
+    this._lineActiveColor = new Color(0x00ff88); // Green when can place
+    this._lineInactiveColor = new Color(0x444444); // Grey when inactive
+    this._lineParticleTexture = null;
+    this._lineTime = 0;
+    this._lineExtent = 0; // 0 = at hand, 1 = fully extended to hit point
+    this._lineExtentTarget = 0; // What we're lerping towards
+    this._lineExtentSpeed = 4.0; // Lerp speed
 
     if (world?.scene) {
       world.scene.add(this.group);
@@ -97,17 +129,22 @@ export class EntropodMinigame {
   start() {
     if (this.isActive) return;
 
-    const bounds = this._getEnvironmentBounds();
-    if (!bounds) {
+    // Switch from world call panel to HUD call panel (like panic minigame does)
+    const wristUI = this.world?.aiManager?.wristUI;
+    if (wristUI) {
+      wristUI.switchToHUDCallPanel();
+    }
+
+    // Store bounds for path regeneration
+    this._bounds = this._getEnvironmentBounds();
+    if (!this._bounds) {
       this.logger.warn("No environment bounds available - using defaults");
-      this._createDefaultPath();
-    } else {
-      this._createFlightPath(bounds);
     }
 
     // Reset scoring
     this.captureCount = 0;
     this.isEntropyActive = false;
+    this._firstEntropyPlayed = false;
     this._scheduleNextEntropy();
 
     // Show score panel in entropy mode
@@ -125,17 +162,227 @@ export class EntropodMinigame {
     const hitTestManager = this.world?.hitTestManager;
     if (!hitTestManager) return;
 
-    // Save original callback
+    // Save original callback and colors
     this._savedOnEnvironmentSelect = hitTestManager.onEnvironmentSelect;
+    this._savedValidColor = hitTestManager._validColor;
+    this._savedInvalidColor = hitTestManager._invalidColor;
 
     // Set our callback for portal placement
     hitTestManager.onEnvironmentSelect = (pose) => {
       this._onPortalPlacement(pose);
     };
 
-    // Enable hit testing
+    // Enable hit testing - stays enabled throughout minigame
     hitTestManager.setEnabled(true);
+
+    // Start greyed out until entropy spawns
+    this._setReticleActive(false);
+
+    // Create placement line VFX
+    this._createPlacementLineVFX();
+
     this.logger.log("Hit testing enabled for portal placement");
+  }
+
+  _setReticleActive(active) {
+    const hitTestManager = this.world?.hitTestManager;
+    if (!hitTestManager) return;
+
+    if (active) {
+      // Restore normal colors
+      hitTestManager._validColor = this._savedValidColor || 0x00ff88;
+      hitTestManager._invalidColor = this._savedInvalidColor || 0x666666;
+    } else {
+      // Grey out - both valid and invalid show as grey
+      hitTestManager._validColor = 0x444444;
+      hitTestManager._invalidColor = 0x444444;
+    }
+  }
+
+  _createPlacementLineVFX() {
+    if (this._placementLine) return;
+
+    // Create particle texture
+    if (!this._lineParticleTexture) {
+      const size = 32;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createRadialGradient(
+        size / 2,
+        size / 2,
+        0,
+        size / 2,
+        size / 2,
+        size / 2
+      );
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.3, "rgba(255,255,255,0.8)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+      this._lineParticleTexture = new CanvasTexture(canvas);
+    }
+
+    // Create line geometry
+    const lineGeo = new BufferGeometry();
+    const positions = new Float32Array(6);
+    lineGeo.setAttribute("position", new Float32BufferAttribute(positions, 3));
+
+    const lineMat = new LineBasicMaterial({
+      color: this._lineActiveColor,
+      transparent: true,
+      opacity: 0.8,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    this._placementLine = new Line(lineGeo, lineMat);
+    this._placementLine.renderOrder = 500;
+    this._placementLine.visible = false;
+    this.world.scene.add(this._placementLine);
+
+    // Create particles along the line
+    const particleCount = 12;
+    const particleGeo = new BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleColors = new Float32Array(particleCount * 3);
+    particleGeo.setAttribute(
+      "position",
+      new Float32BufferAttribute(particlePositions, 3)
+    );
+    particleGeo.setAttribute(
+      "color",
+      new Float32BufferAttribute(particleColors, 3)
+    );
+
+    const particleMat = new PointsMaterial({
+      size: 0.015,
+      map: this._lineParticleTexture,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false,
+      depthWrite: false,
+      blending: 2, // AdditiveBlending
+      sizeAttenuation: true,
+    });
+
+    this._placementLineParticles = new Points(particleGeo, particleMat);
+    this._placementLineParticles.renderOrder = 501;
+    this._placementLineParticles.visible = false;
+    this.world.scene.add(this._placementLineParticles);
+  }
+
+  _updatePlacementLineVFX(delta) {
+    const hitTestManager = this.world?.hitTestManager;
+    if (!hitTestManager || !this._placementLine) {
+      return;
+    }
+
+    const hitPose = hitTestManager.lastHitPose?.right;
+    const xrInputSystem = this.world?.xrInputSystem;
+
+    // Get controller ray
+    const ray = xrInputSystem?.getPreferredControllerRay?.();
+    if (!ray) {
+      this._placementLine.visible = false;
+      this._placementLineParticles.visible = false;
+      return;
+    }
+
+    const startPos = ray.position;
+    let fullHitPos;
+
+    if (hitPose) {
+      const hitMatrix = new Matrix4().fromArray(hitPose.transform.matrix);
+      fullHitPos = new Vector3();
+      fullHitPos.setFromMatrixPosition(hitMatrix);
+    } else {
+      fullHitPos = startPos
+        .clone()
+        .add(ray.direction.clone().multiplyScalar(3.0));
+    }
+
+    // Determine target extent: 1 = fully extended when can place, 0 = retracted
+    const canPlace = this.isEntropyActive && !this.portal;
+    this._lineExtentTarget = canPlace ? 1.0 : 0.0;
+
+    // Lerp extent towards target
+    const extentDiff = this._lineExtentTarget - this._lineExtent;
+    if (Math.abs(extentDiff) > 0.001) {
+      this._lineExtent +=
+        extentDiff * Math.min(1, this._lineExtentSpeed * delta);
+    } else {
+      this._lineExtent = this._lineExtentTarget;
+    }
+
+    // Calculate actual end position based on extent
+    const hitPos = new Vector3().lerpVectors(
+      startPos,
+      fullHitPos,
+      this._lineExtent
+    );
+
+    // Update line positions
+    const linePositions =
+      this._placementLine.geometry.attributes.position.array;
+    linePositions[0] = startPos.x;
+    linePositions[1] = startPos.y;
+    linePositions[2] = startPos.z;
+    linePositions[3] = hitPos.x;
+    linePositions[4] = hitPos.y;
+    linePositions[5] = hitPos.z;
+    this._placementLine.geometry.attributes.position.needsUpdate = true;
+
+    // Update line color based on state
+    const lineColor = canPlace
+      ? this._lineActiveColor
+      : this._lineInactiveColor;
+    this._placementLine.material.color.copy(lineColor);
+    this._placementLine.visible = this._lineExtent > 0.01;
+
+    // Update particles (only visible when extended)
+    this._lineTime += delta;
+    const particlePositions =
+      this._placementLineParticles.geometry.attributes.position.array;
+    const particleColors =
+      this._placementLineParticles.geometry.attributes.color.array;
+    const particleCount = particlePositions.length / 3;
+
+    for (let i = 0; i < particleCount; i++) {
+      // Scale t by extent so particles stay within the visible line
+      const baseT = (i / particleCount + this._lineTime * 0.8) % 1.0;
+      const t = baseT * this._lineExtent;
+      particlePositions[i * 3] = startPos.x + (fullHitPos.x - startPos.x) * t;
+      particlePositions[i * 3 + 1] =
+        startPos.y + (fullHitPos.y - startPos.y) * t;
+      particlePositions[i * 3 + 2] =
+        startPos.z + (fullHitPos.z - startPos.z) * t;
+      particleColors[i * 3] = lineColor.r;
+      particleColors[i * 3 + 1] = lineColor.g;
+      particleColors[i * 3 + 2] = lineColor.b;
+    }
+
+    this._placementLineParticles.geometry.attributes.position.needsUpdate = true;
+    this._placementLineParticles.geometry.attributes.color.needsUpdate = true;
+    this._placementLineParticles.visible = this._lineExtent > 0.01;
+  }
+
+  _disposePlacementLineVFX() {
+    if (this._placementLine) {
+      this._placementLine.geometry?.dispose();
+      this._placementLine.material?.dispose();
+      this.world.scene?.remove(this._placementLine);
+      this._placementLine = null;
+    }
+    if (this._placementLineParticles) {
+      this._placementLineParticles.geometry?.dispose();
+      this._placementLineParticles.material?.dispose();
+      this.world.scene?.remove(this._placementLineParticles);
+      this._placementLineParticles = null;
+    }
   }
 
   _onPortalPlacement(pose) {
@@ -165,12 +412,11 @@ export class EntropodMinigame {
 
     this._spawnPortal(portalPosition);
 
-    // Disable hit testing while portal is active
+    // Grey out reticle while portal is active (but don't disable - keeps visuals)
+    this._setReticleActive(false);
+
     const hitTestManager = this.world?.hitTestManager;
-    if (hitTestManager) {
-      hitTestManager.setEnabled(false);
-      hitTestManager.scaleOutAllPlacedVisuals?.();
-    }
+    hitTestManager?.scaleOutAllPlacedVisuals?.();
   }
 
   _spawnPortal(position) {
@@ -237,6 +483,22 @@ export class EntropodMinigame {
     this.nextEntropyTime = performance.now() + delay;
   }
 
+  _randomizePathVariation() {
+    const v = this._pathVariation;
+    v.pattern = Math.floor(Math.random() * 3); // 0, 1, or 2
+    v.scale = 0.35 + Math.random() * 0.25; // 0.35 - 0.6
+    v.rotation = Math.random() * Math.PI * 2; // 0 - 2π
+    v.heightAmp = 0.3 + Math.random() * 0.5; // 0.3 - 0.8
+    v.tension = 0.2 + Math.random() * 0.3; // 0.2 - 0.5
+    v.startOffset = Math.random(); // 0 - 1 (where on path to start)
+
+    const patterns = ["figure-8", "oval", "trefoil"];
+    this.logger.log(
+      `Path variation: ${patterns[v.pattern]}, scale=${v.scale.toFixed(2)}, ` +
+        `rot=${((v.rotation * 180) / Math.PI).toFixed(0)}°`
+    );
+  }
+
   _startEntropy() {
     if (this.isEntropyActive) return;
 
@@ -245,31 +507,39 @@ export class EntropodMinigame {
       this._disposePortal();
     }
 
+    // Randomize and regenerate the flight path
+    this._randomizePathVariation();
+    this._disposePath();
+    if (this._bounds) {
+      this._createFlightPath(this._bounds);
+    } else {
+      this._createDefaultPath();
+    }
+    this._createSphere();
+
+    // Apply start offset to distance traveled
+    this.distanceTraveled = this._pathVariation.startOffset * this.pathLength;
+
     this.isEntropyActive = true;
     this.entropyStartTime = performance.now();
 
-    // Spawn sphere if not already created
-    if (!this.sphere) {
-      this._createSphere();
+    // Make all segments visible
+    for (const segment of this.segments) {
+      segment.visible = true;
     }
 
-    // Change sphere to magenta when capturable
-    if (this.sphere?.material) {
-      this.sphere.material.color.setHex(0xff00ff);
-    }
-    if (this.sphere) {
-      this.sphere.visible = true;
-    }
-
-    // Always enable hit testing when entropy starts
-    const hitTestManager = this.world?.hitTestManager;
-    if (hitTestManager) {
-      hitTestManager.setEnabled(true);
-    }
+    // Activate reticle (green when valid) for portal placement
+    this._setReticleActive(true);
 
     // Notify UI
     const wristUI = this.world?.spatialUIManager;
     wristUI?.scoreUI?.setPanicking(() => this.isEntropyActive);
+
+    // Trigger first entropod dialog via game state criteria
+    if (!this._firstEntropyPlayed) {
+      this._firstEntropyPlayed = true;
+      gameState.setState({ firstEntropodSpawned: true });
+    }
 
     this.logger.log("Entropy started - place a portal to capture!");
   }
@@ -279,13 +549,13 @@ export class EntropodMinigame {
 
     this.isEntropyActive = false;
 
-    // Hide sphere until next entropy
-    if (this.sphere) {
-      this.sphere.visible = false;
+    // Hide all segments until next entropy
+    for (const segment of this.segments) {
+      segment.visible = false;
     }
 
-    // Note: Don't disable hit testing here - portal closing will handle that
-    // Hit testing re-enables when next entropy starts
+    // Grey out reticle until next entropy (but keep it visible)
+    this._setReticleActive(false);
 
     if (captured) {
       this.captureCount++;
@@ -306,10 +576,66 @@ export class EntropodMinigame {
 
   _completeMinigame() {
     this.logger.log("Minigame complete!");
+
+    // Trigger robot celebration - look at player, happy jumps, faces, voices
+    this._triggerRobotCelebration();
+
     if (this.onMinigameComplete) {
       this.onMinigameComplete();
     }
     this.stop();
+  }
+
+  _triggerRobotCelebration() {
+    const robotSystem = this.world?.robotSystem;
+    if (!robotSystem) return;
+
+    const player = this.world?.player;
+    const playerPos = player?.head?.getWorldPosition?.(new Vector3());
+
+    // Get all robot entities
+    const robotEntities = robotSystem.robotEntities;
+    if (!robotEntities) return;
+
+    for (const [entityIndex] of robotEntities) {
+      // Make robot look at player
+      if (playerPos) {
+        const lookTarget = robotSystem.robotStates?.get(entityIndex);
+        if (lookTarget) {
+          lookTarget.lookAtTarget = playerPos.clone();
+          lookTarget.lookAtStartTime = performance.now();
+          lookTarget.lookAtDuration = 4000; // 4 seconds
+        }
+      }
+
+      // Set excited face
+      robotSystem.setRobotFaceEmotion?.(entityIndex, "excited");
+
+      // Play happy voice with slight random delay
+      const voice = robotSystem.audioManager?.getVoice(entityIndex);
+      if (voice) {
+        setTimeout(() => voice.happy?.(), Math.random() * 300);
+      }
+
+      // Trigger happy bounce animation with staggered timing
+      setTimeout(() => {
+        robotSystem.interactionManager?.triggerSoloAnimation(
+          entityIndex,
+          "happyBounce"
+        );
+      }, 200 + Math.random() * 500);
+    }
+
+    // After celebration, resume normal wandering
+    setTimeout(() => {
+      for (const [entityIndex] of robotEntities) {
+        robotSystem.setRobotFaceEmotion?.(entityIndex, "content");
+        const state = robotSystem.robotStates?.get(entityIndex);
+        if (state) {
+          state.lookAtTarget = null;
+        }
+      }
+    }, 4000);
   }
 
   stop() {
@@ -327,12 +653,17 @@ export class EntropodMinigame {
     // Clean up portal
     this._disposePortal();
 
-    // Restore original hit test callback and disable
+    // Restore original hit test callback, colors, and disable
     const hitTestManager = this.world?.hitTestManager;
     if (hitTestManager) {
       hitTestManager.onEnvironmentSelect = this._savedOnEnvironmentSelect;
+      hitTestManager._validColor = this._savedValidColor || 0x00ff88;
+      hitTestManager._invalidColor = this._savedInvalidColor || 0x666666;
       hitTestManager.setEnabled(false);
     }
+
+    // Clean up placement line VFX
+    this._disposePlacementLineVFX();
 
     this._disposePath();
   }
@@ -395,27 +726,44 @@ export class EntropodMinigame {
 
     const points = [];
     const numPoints = this.config.numControlPoints;
+    const v = this._pathVariation;
+    const cosR = Math.cos(v.rotation);
+    const sinR = Math.sin(v.rotation);
 
-    // Figure-8 pattern scaled to 60% of room size (leaves margin)
-    const scale = 0.6;
     for (let i = 0; i < numPoints; i++) {
       const t = i / numPoints;
       const angle = t * Math.PI * 2;
 
-      // Lemniscate (figure-8) in normalized coords
-      const denom = 1 + Math.sin(angle) * Math.sin(angle);
-      const nx = Math.sin(angle) / denom;
-      const nz = (Math.sin(angle) * Math.cos(angle)) / denom;
+      let nx, nz;
 
-      const x = center.x + nx * halfW * scale * 1.5;
-      const z = center.z + nz * halfD * scale * 2;
-      const y = centerY + Math.sin(angle * 2) * yRange * 0.5;
+      if (v.pattern === 0) {
+        // Figure-8 (lemniscate)
+        const denom = 1 + Math.sin(angle) * Math.sin(angle);
+        nx = Math.sin(angle) / denom;
+        nz = (Math.sin(angle) * Math.cos(angle)) / denom;
+      } else if (v.pattern === 1) {
+        // Oval/ellipse
+        nx = Math.cos(angle) * 0.7;
+        nz = Math.sin(angle);
+      } else {
+        // Trefoil (3-lobed clover)
+        const r = 0.5 + 0.5 * Math.cos(3 * angle);
+        nx = r * Math.cos(angle);
+        nz = r * Math.sin(angle);
+      }
+
+      // Apply rotation
+      const rx = nx * cosR - nz * sinR;
+      const rz = nx * sinR + nz * cosR;
+
+      const x = center.x + rx * halfW * v.scale;
+      const z = center.z + rz * halfD * v.scale;
+      const y = centerY + Math.sin(angle * 2) * yRange * v.heightAmp;
 
       points.push(new Vector3(x, Math.max(minY, Math.min(maxY, y)), z));
     }
 
-    // Use lower tension to keep curve tighter to control points
-    this.curve = new CatmullRomCurve3(points, true, "catmullrom", 0.3);
+    this.curve = new CatmullRomCurve3(points, true, "catmullrom", v.tension);
     this.pathLength = this.curve.getLength();
 
     this.logger.log(`Flight path: ${this.pathLength.toFixed(1)}m`);
@@ -473,15 +821,40 @@ export class EntropodMinigame {
   }
 
   _createSphere() {
-    const geometry = new SphereGeometry(0.08, 16, 16);
-    const material = new MeshBasicMaterial({ color: 0xff0000 });
-    this.sphere = new Mesh(geometry, material);
-    this.sphere.frustumCulled = false;
-    this.group.add(this.sphere);
+    // Get environment map from robot system
+    const envMap = this.world?.robotSystem?.envMapLoader?.envMap || null;
+
+    // Create metallic material for body segments
+    const bodyMaterial = new MeshStandardMaterial({
+      color: 0xffffff,
+      metalness: 1.0,
+      roughness: 0.0,
+      envMap: envMap,
+      envMapIntensity: 1.5,
+    });
+
+    // Create segments (head is first, followed by smaller body segments)
+    this.segments = [];
+    for (let i = 0; i < this.segmentCount; i++) {
+      // Each segment gets progressively smaller
+      const sizeFactor = 1 - (i / this.segmentCount) * 0.6;
+      const radius = this.headRadius * sizeFactor;
+
+      const geometry = new SphereGeometry(radius, 16, 16);
+      const segment = new Mesh(geometry, bodyMaterial.clone());
+      segment.frustumCulled = false;
+      this.group.add(segment);
+      this.segments.push(segment);
+    }
+
+    // Head is the first segment
+    this.sphere = this.segments[0];
 
     // Position at start
     const startPos = this.curve.getPointAt(0);
-    this.sphere.position.copy(startPos);
+    for (const segment of this.segments) {
+      segment.position.copy(startPos);
+    }
     this.distanceTraveled = 0;
   }
 
@@ -492,12 +865,15 @@ export class EntropodMinigame {
       this.group.remove(this.pathLine);
       this.pathLine = null;
     }
-    if (this.sphere) {
-      this.sphere.geometry?.dispose();
-      this.sphere.material?.dispose();
-      this.group.remove(this.sphere);
-      this.sphere = null;
+    // Dispose all segments
+    for (const segment of this.segments) {
+      segment.geometry?.dispose();
+      segment.material?.dispose();
+      this.group.remove(segment);
     }
+    this.segments = [];
+    this.sphere = null;
+
     this.curve = null;
     this.pathLength = 0;
     this.distanceTraveled = 0;
@@ -531,6 +907,16 @@ export class EntropodMinigame {
 
     if (!this.isActive) return;
 
+    // Ensure hit testing stays enabled (other systems might disable it)
+    const hitTestManager = this.world?.hitTestManager;
+    if (hitTestManager && !hitTestManager.enabled) {
+      hitTestManager.setEnabled(true);
+      this._setReticleActive(this.isEntropyActive && !this.portal);
+    }
+
+    // Update placement line VFX
+    this._updatePlacementLineVFX(deltaTime);
+
     const now = performance.now();
 
     // Check if it's time to start entropy (only if not already active)
@@ -541,7 +927,7 @@ export class EntropodMinigame {
     // Update portal animation
     this._updatePortal(deltaTime, now);
 
-    // Move sphere along path (with vacuum effect if portal active)
+    // Move entropod along path (with vacuum effect if portal active)
     if (
       this.sphere &&
       this.sphere.visible &&
@@ -550,49 +936,74 @@ export class EntropodMinigame {
     ) {
       // Normal path movement
       this.distanceTraveled += this.speed * deltaTime;
-      const t = (this.distanceTraveled % this.pathLength) / this.pathLength;
-      const pathPos = this.curve.getPointAt(t);
 
-      // Apply vacuum effect if portal is open
-      if (this.portal && this.portal.phase === "open") {
-        const toPortal = new Vector3().subVectors(
-          this.portal.position,
-          this.sphere.position
-        );
-        const dist = toPortal.length();
+      // Position each segment along the path, trailing behind the head
+      for (let i = 0; i < this.segments.length; i++) {
+        const segment = this.segments[i];
+        const segmentDistance = this.distanceTraveled - i * this.segmentSpacing;
+        const segT =
+          (((segmentDistance % this.pathLength) + this.pathLength) %
+            this.pathLength) /
+          this.pathLength;
+        const segPos = this.curve.getPointAt(segT);
 
-        if (dist < this.vacuumRadius) {
-          // How much to pull: 0 at edge of vacuum, 1 at center
-          // Using squared falloff for more dramatic pull near center
-          const t = 1 - dist / this.vacuumRadius;
-          const pullFactor = t * t; // Squared for acceleration toward center
-
-          // Smoothly blend sphere position toward portal
-          // At edge (pullFactor ~0): follow path normally
-          // Near center (pullFactor ~1): move directly toward portal
-          const targetPos = new Vector3().lerpVectors(
-            pathPos,
+        // Apply vacuum effect if portal is open (only affects visible segments)
+        if (this.portal && this.portal.phase === "open") {
+          const toPortal = new Vector3().subVectors(
             this.portal.position,
-            pullFactor
+            segment.position
           );
-
-          // Move sphere toward target (smoothed by deltaTime)
-          const moveSpeed = this.vacuumStrength * (0.5 + pullFactor * 2);
-          this.sphere.position.lerp(
-            targetPos,
-            Math.min(1, moveSpeed * deltaTime)
+          // Cylindrical check: horizontal distance (xz) and vertical distance (y)
+          const horizDist = Math.sqrt(
+            toPortal.x * toPortal.x + toPortal.z * toPortal.z
           );
+          const vertDist = Math.abs(toPortal.y);
 
-          // Check for capture
-          if (dist < this.captureRadius) {
-            this._captureEntropod();
-            return;
+          if (
+            horizDist < this.vacuumRadius &&
+            vertDist < this.vacuumHeight / 2
+          ) {
+            const horizT = 1 - horizDist / this.vacuumRadius;
+            const vertT = 1 - vertDist / (this.vacuumHeight / 2);
+            const pullT = Math.min(horizT, vertT);
+            const pullFactor = pullT * pullT;
+
+            const targetPos = new Vector3().lerpVectors(
+              segPos,
+              this.portal.position,
+              pullFactor
+            );
+
+            const moveSpeed = this.vacuumStrength * (0.5 + pullFactor * 2);
+            segment.position.lerp(
+              targetPos,
+              Math.min(1, moveSpeed * deltaTime)
+            );
+          } else {
+            segment.position.copy(segPos);
           }
         } else {
-          this.sphere.position.copy(pathPos);
+          segment.position.copy(segPos);
         }
-      } else {
-        this.sphere.position.copy(pathPos);
+      }
+
+      // Orient head to look in direction of travel
+      const headT = (this.distanceTraveled % this.pathLength) / this.pathLength;
+      const tangent = this.curve.getTangentAt(headT);
+      if (tangent) {
+        // Create rotation to face tangent direction
+        const up = new Vector3(0, 1, 0);
+        const lookTarget = this.sphere.position.clone().add(tangent);
+        this.sphere.lookAt(lookTarget);
+      }
+
+      // Check for capture (head proximity to portal)
+      if (this.portal && this.portal.phase === "open") {
+        const dist = this.sphere.position.distanceTo(this.portal.position);
+        if (dist < this.captureRadius) {
+          this._captureEntropod();
+          return;
+        }
       }
     }
   }
@@ -645,10 +1056,7 @@ export class EntropodMinigame {
 
         // If entropy is still active (portal closed without capture), re-enable placement
         if (this.isEntropyActive) {
-          const hitTestManager = this.world?.hitTestManager;
-          if (hitTestManager) {
-            hitTestManager.setEnabled(true);
-          }
+          this._setReticleActive(true);
           // Reset entropy timer so player has time for another attempt
           this.entropyStartTime = performance.now();
           this.logger.log("Portal closed without capture - try again!");
@@ -662,9 +1070,9 @@ export class EntropodMinigame {
   _captureEntropod() {
     this.logger.log("Entropod captured by portal!");
 
-    // Hide the sphere
-    if (this.sphere) {
-      this.sphere.visible = false;
+    // Hide all segments
+    for (const segment of this.segments) {
+      segment.visible = false;
     }
 
     // Start portal closing immediately

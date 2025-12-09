@@ -521,6 +521,7 @@ export class RobotPlayerInteractionManager {
         if (colliderData?.joint) {
           const pos = new Vector3();
           colliderData.joint.getWorldPosition(pos);
+          if (Number.isNaN(pos.x)) continue; // Hand tracking lost
           handPositions[side] = pos;
           // Get wrist quaternion for hand orientation
           const wristData = fingertipColliders.get(`${side}_wrist`);
@@ -544,6 +545,7 @@ export class RobotPlayerInteractionManager {
           if (controller) {
             const pos = new Vector3();
             controller.getWorldPosition(pos);
+            if (Number.isNaN(pos.x)) continue; // Controller tracking lost
             handPositions[side] = pos;
             const quat = new Quaternion();
             controller.getWorldQuaternion(quat);
@@ -561,6 +563,7 @@ export class RobotPlayerInteractionManager {
         if (!handPositions[side] && raySpaces[side]) {
           const pos = new Vector3();
           raySpaces[side].getWorldPosition(pos);
+          if (Number.isNaN(pos.x)) continue; // Ray space tracking lost
           handPositions[side] = pos;
           const quat = new Quaternion();
           raySpaces[side].getWorldQuaternion(quat);
@@ -643,18 +646,20 @@ export class RobotPlayerInteractionManager {
             nearestPos = antennaPos;
           }
         }
-        this.logger.log(
-          `[DataLink] Nearest antenna (robot ${nearestIdx}) pos: (${nearestPos.x.toFixed(
-            2
-          )}, ${nearestPos.y.toFixed(2)}, ${nearestPos.z.toFixed(2)})`
-        );
-        this.logger.log(
-          `[DataLink] Distance to nearest: ${minDist.toFixed(
-            3
-          )}m (VFX maxDist=${
-            this._dataLinkVFX.right?.config?.maxDistance || 0.6
-          }m)`
-        );
+        if (nearestPos) {
+          this.logger.log(
+            `[DataLink] Nearest antenna (robot ${nearestIdx}) pos: (${nearestPos.x.toFixed(
+              2
+            )}, ${nearestPos.y.toFixed(2)}, ${nearestPos.z.toFixed(2)})`
+          );
+          this.logger.log(
+            `[DataLink] Distance to nearest: ${minDist.toFixed(
+              3
+            )}m (VFX maxDist=${
+              this._dataLinkVFX.right?.config?.maxDistance || 0.6
+            }m)`
+          );
+        }
       }
     }
 

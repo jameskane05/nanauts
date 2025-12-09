@@ -139,6 +139,37 @@ const specialPresets = {
     spawnRobotsImmediately: true,
     entropodMinigame: true, // Triggers EntropodMinigame.start()
   },
+
+  // Post-entropod: modemQuestion dialog plays, then translator enabled for YES/NO/NON-ANSWER
+  MODEM_STAY_QUESTION: {
+    currentState: 6, // GAME_STATES.PORTAL_PLACEMENT
+    roomSetupRequired: false,
+    introPlayed: true,
+    callAnswered: true,
+    portalPlacementPlayed: true,
+    ambassadorPresentationPlayed: true,
+    robotsActive: true,
+    robotBehavior: "wandering",
+    spawnRobotsImmediately: true,
+    // Trigger modemQuestion dialog which enables translator on complete
+    modemArrived: true,
+  },
+
+  // Direct test of YES/NO/NON-ANSWER - translator already enabled
+  MODEM_STAY_VOICE: {
+    currentState: 6, // GAME_STATES.PORTAL_PLACEMENT
+    roomSetupRequired: false,
+    introPlayed: true,
+    callAnswered: true,
+    portalPlacementPlayed: true,
+    ambassadorPresentationPlayed: true,
+    robotsActive: true,
+    robotBehavior: "wandering",
+    spawnRobotsImmediately: true,
+    // Skip dialog, go directly to voice input
+    voiceInputEnabled: true,
+    interpretMode: "modem_stay",
+  },
 };
 
 /**
