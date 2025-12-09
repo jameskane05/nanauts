@@ -101,6 +101,8 @@ export class StartScreen {
           </div>
         </div>
 
+        <img src="images/nanauts.png" alt="Nanauts" class="hero-image" />
+
         <div class="button-container">
           <button id="start-button" class="menu-button start-button">START</button>
           <button id="options-button" class="menu-button">OPTIONS</button>
@@ -108,7 +110,7 @@ export class StartScreen {
 
         <div class="footer">
           <p class="credits">Made for WebXR with IWSDK and Llama 3.3</p>
-          <p class="credits">for controllers or hand tracking (microgestures)</p>
+          <p class="credits">for controllers or hand tracking</p>
         </div>
       </div>
     `;

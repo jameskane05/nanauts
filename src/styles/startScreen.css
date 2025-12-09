@@ -27,11 +27,11 @@
   background: rgba(8, 24, 36, 0.95);
   border: 2px solid rgba(0, 200, 220, 0.6);
   border-radius: 12px;
-  padding: 40px 50px;
+  padding: 25px 50px 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
   min-width: 400px;
   max-width: 90vw;
   box-shadow: 0 0 40px rgba(0, 180, 200, 0.15),
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 #start-screen-overlay .meter-group {
@@ -191,11 +191,18 @@
   }
 }
 
+#start-screen-overlay .hero-image {
+  max-width: 320px;
+  height: auto;
+  margin: 0;
+  filter: drop-shadow(0 0 20px rgba(0, 180, 200, 0.3));
+}
+
 #start-screen-overlay .button-container {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin-top: 3rem;
+  margin-top: 1.5rem;
 }
 
 #start-screen-overlay .menu-button {
@@ -277,11 +284,11 @@
 }
 
 #start-screen-overlay .footer {
-  margin-top: 30px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 #start-screen-overlay .credits {
