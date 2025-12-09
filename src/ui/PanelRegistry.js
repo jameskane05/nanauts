@@ -107,13 +107,16 @@ export class PanelRegistry {
 
     await this._waitForDocument(panelKey, entity);
 
+    // World panel renders behind HUD/wrist panels
+    const baseRenderOrder = panelKey === "callWorld" ? 8900 : 9000;
+
     group.traverse((child) => {
       child.frustumCulled = false;
       child.layers.enableAll();
-      // Set render order very high and disable depth test so UI always renders on top
-      // Don't overwrite higher values (viseme is at 9010)
-      if (child.isMesh && child.renderOrder < 9000) {
-        child.renderOrder = 9000;
+      // Set render order and disable depth test so UI always renders on top
+      // Don't overwrite higher values (viseme is at 9010, world viseme at 8910)
+      if (child.isMesh && child.renderOrder < baseRenderOrder) {
+        child.renderOrder = baseRenderOrder;
         if (child.material) {
           child.material.depthTest = false;
           child.material.depthWrite = false;
@@ -148,7 +151,7 @@ export class PanelRegistry {
         if (panel) {
           this.applyMountSizing(panelKey, panel.currentMount);
           // Enforce render settings now that UIKit has created all meshes
-          this._enforceUIRenderSettingsForPanel(panel);
+          this._enforceUIRenderSettingsForPanel(panel, panelKey);
         }
         this.logger.log(
           `Panel ${panelKey} document ready after ${pending.attempts} frames`
@@ -244,12 +247,15 @@ export class PanelRegistry {
     }
   }
 
-  _enforceUIRenderSettingsForPanel(panel) {
+  _enforceUIRenderSettingsForPanel(panel, panelKey = null) {
     if (!panel?.group) return;
 
+    // World panel renders behind HUD/wrist panels
+    const baseRenderOrder = panelKey === "callWorld" ? 8900 : 9000;
+
     panel.group.traverse((child) => {
-      if (child.isMesh && child.renderOrder < 9000) {
-        child.renderOrder = 9000;
+      if (child.isMesh && child.renderOrder < baseRenderOrder) {
+        child.renderOrder = baseRenderOrder;
         if (child.material) {
           child.material.depthTest = false;
           child.material.depthWrite = false;
@@ -351,7 +357,7 @@ export class PanelRegistry {
   enforceRenderSettingsForVisiblePanels() {
     for (const [panelKey, panel] of Object.entries(this.panels)) {
       if (panel?.group?.visible) {
-        this._enforceUIRenderSettingsForPanel(panel);
+        this._enforceUIRenderSettingsForPanel(panel, panelKey);
       }
     }
   }
@@ -377,12 +383,15 @@ export class PanelRegistry {
     const group = panel.group;
     const targetMount = this.mountManager.getMountGroup(panel.currentMount);
 
+    // World panel renders behind HUD/wrist panels
+    const baseRenderOrder = panelKey === "callWorld" ? 8900 : 9000;
+
     const setupMesh = (child) => {
       child.frustumCulled = false;
       child.layers.enableAll();
-      // Don't overwrite higher values (viseme is at 9010)
-      if (child.isMesh && child.renderOrder < 9000) {
-        child.renderOrder = 9000;
+      // Don't overwrite higher values (viseme at 9010, world viseme at 8910)
+      if (child.isMesh && child.renderOrder < baseRenderOrder) {
+        child.renderOrder = baseRenderOrder;
         if (child.material) {
           child.material.depthTest = false;
           child.material.depthWrite = false;

@@ -67,6 +67,7 @@ export class RobotPlayerInteractionManager {
     this.minigameActive = false;
     this.minigameCalmCount = 0;
     this.minigameCalmGoal = 5;
+    this.minigamePanicCount = 0; // Track how many panics have started
     this.onMinigameComplete = null;
     this.onScoreUpdate = null;
     this.onPanicStart = null;
@@ -129,6 +130,8 @@ export class RobotPlayerInteractionManager {
         isFollowing: false,
         isFlying: false,
         isPanicking: false,
+        needsReassurance: false, // True when robot is waiting for reassurance from player
+        lastWorriedFaceTime: 0, // For cycling worried faces during reassurance
         lastPatTime: 0,
         currentBreadcrumbIndex: 0,
         summonedBy: null, // 'name' or 'pat'
@@ -197,6 +200,41 @@ export class RobotPlayerInteractionManager {
   }
 
   /**
+   * Set a robot into reassurance mode (worried, waiting for comforting words)
+   * @param {number} entityIndex - Robot entity index
+   */
+  setNeedsReassurance(entityIndex) {
+    const state = this.getState(entityIndex);
+    state.needsReassurance = true;
+    state.lastWorriedFaceTime = 0;
+
+    // Set initial worried face
+    this.robotSystem.setRobotFaceEmotion(entityIndex, RobotEmotion.SAD);
+
+    this.logger.log(`Robot ${entityIndex} now needs reassurance`);
+  }
+
+  /**
+   * Clear reassurance mode for a robot (they've been comforted)
+   * @param {number} entityIndex - Robot entity index
+   */
+  clearReassurance(entityIndex) {
+    const state = this.getState(entityIndex);
+    state.needsReassurance = false;
+    state.isSummoned = false;
+
+    // Return to wandering
+    const stateMachine = this.robotSystem.stateMachine;
+    if (stateMachine) {
+      stateMachine.forceState(entityIndex, ROBOT_STATE.WANDERING);
+    }
+
+    this.logger.log(
+      `Robot ${entityIndex} reassurance cleared, resuming normal behavior`
+    );
+  }
+
+  /**
    * Start panic minigame - robots randomly enter panic state over time
    */
   startPanicMinigame() {
@@ -204,6 +242,7 @@ export class RobotPlayerInteractionManager {
 
     this.minigameActive = true;
     this.minigameCalmCount = 0;
+    this.minigamePanicCount = 0; // Reset panic count when minigame starts
     this.panicCooldownUntil = 0; // Reset cooldown when minigame starts
 
     // Update global game state
@@ -306,7 +345,12 @@ export class RobotPlayerInteractionManager {
       return;
     }
 
+    // Increment panic count BEFORE setting state
+    this.minigamePanicCount++;
+    const panicNumber = this.minigamePanicCount;
+
     state.isPanicking = true;
+    state.panicNumber = panicNumber; // Track which panic this is (for movement logic)
     state.lastPatTime = 0;
     state.lastPanicSoundTime = 0;
     state.panicRotation = 0;
@@ -317,20 +361,23 @@ export class RobotPlayerInteractionManager {
       stateMachine.forceState(entityIndex, ROBOT_STATE.PANICKING);
     }
 
-    // Stop the robot's movement (except robots 4 and 5 can continue navigating)
-    if (entityIndex !== 4 && entityIndex !== 5) {
+    // 4th and 5th panics: robot moves while panicking (harder to catch)
+    const shouldMoveWhilePanicking = panicNumber >= 4;
+
+    if (!shouldMoveWhilePanicking) {
       this.robotSystem.navigationManager?.stopRobotMovement(entityIndex);
     } else {
-      // Robots 4 and 5: set an initial navigation target when entering panic
+      // Moving panic: set an initial navigation target
+      // (RobotSystem.js now correctly handles navigation for panicNumber >= 4)
       const robotEntity = this.robotSystem.robotEntities?.get(entityIndex);
       const agentId = this.robotSystem.robotAgentIds?.get(entityIndex);
+      this.logger.log(
+        `[Panic] Panic #${panicNumber}: Robot ${entityIndex} (agentId=${agentId}) will MOVE while panicking`
+      );
       if (robotEntity && agentId !== null && agentId !== undefined) {
         this.robotSystem.navigationManager?.selectRandomWanderTarget(
           robotEntity,
           agentId
-        );
-        this.logger.log(
-          `[Panic] Robot ${entityIndex} set initial navigation target while panicking`
         );
       }
     }
@@ -1518,8 +1565,35 @@ export class RobotPlayerInteractionManager {
     if (dist < 1.0) {
       this.robotSystem.navigationManager?.stopRobotMovement(entityIndex);
 
-      // Look at player (handled by face manager)
-      // Robot stays stationary, waiting for pat
+      // If in reassurance mode, cycle through worried faces
+      if (state.needsReassurance) {
+        const now = performance.now() / 1000;
+        const worriedFaceInterval = 2.5 + Math.random() * 1.5; // 2.5-4 seconds
+
+        if (now - state.lastWorriedFaceTime > worriedFaceInterval) {
+          state.lastWorriedFaceTime = now;
+
+          // Cycle through worried/sad/fear faces
+          const worriedEmotions = [
+            RobotEmotion.SAD,
+            RobotEmotion.FEAR,
+            RobotEmotion.ANGRY,
+          ];
+          const emotion =
+            worriedEmotions[Math.floor(Math.random() * worriedEmotions.length)];
+          this.robotSystem.setRobotFaceEmotion(entityIndex, emotion);
+
+          // Occasionally play a worried sound
+          if (Math.random() < 0.3) {
+            const voice = this.robotSystem.audioManager?.getVoice(entityIndex);
+            if (voice) {
+              const sounds = ["sad", "angry"];
+              const sound = sounds[Math.floor(Math.random() * sounds.length)];
+              voice[sound]?.();
+            }
+          }
+        }
+      }
     } else {
       // Continue navigating toward player
       this._navigateToPlayer(entityIndex);
@@ -1607,7 +1681,7 @@ export class RobotPlayerInteractionManager {
   }
 
   /**
-   * Update panic state - play periodic distressed sounds
+   * Update panic state - play periodic distressed sounds and navigate (robots 4+5)
    */
   _updatePanic(entityIndex, robotEntity, deltaTime) {
     const state = this.getState(entityIndex);
@@ -1635,6 +1709,35 @@ export class RobotPlayerInteractionManager {
       this.robotSystem.setRobotFaceEmotion(entityIndex, emotion);
     }
 
+    // 4th and 5th panics continue navigating while panicking (moving panic)
+    if (state.panicNumber >= 4) {
+      const agentId = this.robotSystem.robotAgentIds?.get(entityIndex);
+      if (agentId !== null && agentId !== undefined) {
+        const agent = this.robotSystem.agents?.agents?.[agentId];
+        if (agent) {
+          // Compute desired speed from desiredVelocity vector (same as RobotSystem)
+          const desVel = agent.desiredVelocity || [0, 0, 0];
+          const desiredSpeed = Math.sqrt(
+            desVel[0] * desVel[0] +
+              desVel[1] * desVel[1] +
+              desVel[2] * desVel[2]
+          );
+          // Check if robot is nearly stopped (reached target or stuck)
+          if (desiredSpeed < 0.1) {
+            this.logger.log(
+              `[Panic] Robot ${entityIndex} stopped (speed=${desiredSpeed.toFixed(
+                3
+              )}), setting new target`
+            );
+            this.robotSystem.navigationManager?.selectRandomWanderTarget(
+              robotEntity,
+              agentId
+            );
+          }
+        }
+      }
+    }
+
     // Update scan VFX (lasers)
     const vfx = this.robotSystem.scanManager?.robotScanVFX?.get(entityIndex);
     if (vfx) {
@@ -1658,6 +1761,7 @@ export class RobotPlayerInteractionManager {
     this.breadcrumbs = [];
     this.minigameActive = false;
     this.minigameCalmCount = 0;
+    this.minigamePanicCount = 0;
     this._antennaTips.clear();
 
     // Cleanup DataLinkVFX

@@ -791,9 +791,10 @@ export class AIManager extends createSystem({
 
     const { entityIndex } = baudResult;
     const voice = robotSystem.audioManager?.getVoice(entityIndex);
+    const pim = robotSystem.playerInteractionManager;
 
     if (isPositive) {
-      // Happy reaction
+      // Happy reaction - Baud is finally reassured!
       robotSystem.setRobotFaceEmotion(entityIndex, "HAPPY");
       voice?.happy?.();
       robotSystem.interactionManager?.triggerSoloAnimation(
@@ -802,16 +803,22 @@ export class AIManager extends createSystem({
       );
       this.logger.log("Baud is happy - reassurance received!");
 
+      // Clear reassurance mode and let Baud resume normal behavior
+      pim?.clearReassurance(entityIndex);
+
       // Disable voice input and reset interpret mode after success
       gameState.setState({
         voiceInputEnabled: false,
         interpretMode: "greeting",
       });
     } else {
-      // Sad reaction
+      // Sad reaction - but Baud stays and keeps waiting for reassurance
       robotSystem.setRobotFaceEmotion(entityIndex, "SAD");
       voice?.sad?.();
-      this.logger.log("Baud is sad - not reassured");
+      this.logger.log("Baud is sad - still waiting for reassurance");
+
+      // Baud stays in ATTENDING_PLAYER state with needsReassurance=true
+      // (already set by setNeedsReassurance, just keep waiting)
     }
   }
 

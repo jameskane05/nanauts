@@ -437,7 +437,7 @@ export const dialogTracks = {
     audio: "./audio/dialog/08_there-there-little-friend.mp3",
     captions: [
       { text: "There there, little friend.", duration: 1.88 },
-      { text: "Good job. Que calm.", startTime: 2.74, duration: 1.38 },
+      { text: "Good job. They're calm.", startTime: 2.74, duration: 1.38 },
     ],
     criteria: {
       firstCalmCompleted: true,
@@ -512,9 +512,19 @@ export const dialogTracks = {
         voiceInputEnabled: true,
         interpretMode: "reassurance",
       });
-      // Summon Baud to player
+      // Summon Baud to player and set into reassurance mode
       const state = gameState.getState();
-      state.world?.robotSystem?.summonRobotByName("Baud");
+      const robotSystem = state.world?.robotSystem;
+      if (robotSystem) {
+        robotSystem.summonRobotByName("Baud");
+        // Set Baud into worried/needsReassurance mode
+        const baudResult = robotSystem.characterManager?.getByName("Baud");
+        if (baudResult) {
+          robotSystem.playerInteractionManager?.setNeedsReassurance(
+            baudResult.entityIndex
+          );
+        }
+      }
     },
   },
 };

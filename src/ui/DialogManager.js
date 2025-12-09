@@ -303,6 +303,17 @@ export class DialogManager {
   }
 
   _checkAutoPlayDialogs(state) {
+    // Debug: log calm states
+    if (
+      state?.firstCalmCompleted ||
+      state?.secondCalmCompleted ||
+      state?.thirdCalmCompleted
+    ) {
+      this.logger.log(
+        `Calm states: 1st=${state.firstCalmCompleted}, 2nd=${state.secondCalmCompleted}, 3rd=${state.thirdCalmCompleted}, isPlaying=${this.isPlaying}`
+      );
+    }
+
     if (this.isPlaying) {
       this.logger.log(
         `Skipping auto-play check - dialog already playing: ${this.currentDialog?.id}`

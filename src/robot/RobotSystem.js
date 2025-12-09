@@ -1217,12 +1217,13 @@ export class RobotSystem extends createSystem({}) {
     if (stationary) {
       // Stop all agents and set state machine to STATIONARY
       for (const [entityIndex, agentId] of this.robotAgentIds.entries()) {
-        // Skip panicking robots - they have their own behavior (except robots 4 and 5 can navigate)
+        // Skip panicking robots - they have their own behavior
+        // (4th and 5th panic robots can navigate, so don't skip those)
         const currentState = this.stateMachine.getState(entityIndex);
+        const pimState = this.pim?.getState(entityIndex);
         if (
           currentState === ROBOT_STATE.PANICKING &&
-          entityIndex !== 4 &&
-          entityIndex !== 5
+          (!pimState || pimState.panicNumber < 4)
         ) {
           continue;
         }
@@ -1259,12 +1260,13 @@ export class RobotSystem extends createSystem({}) {
       this.logger.log("=== setStationary(false) - RESUMING WANDERING ===");
       let targetDelay = 0;
       for (const [entityIndex, agentId] of this.robotAgentIds.entries()) {
-        // Skip panicking robots - they have their own behavior (except robots 4 and 5 can navigate)
+        // Skip panicking robots - they have their own behavior
+        // (4th and 5th panic robots can navigate, so don't skip those)
         const currentState = this.stateMachine.getState(entityIndex);
+        const pimState = this.pim?.getState(entityIndex);
         if (
           currentState === ROBOT_STATE.PANICKING &&
-          entityIndex !== 4 &&
-          entityIndex !== 5
+          (!pimState || pimState.panicNumber < 4)
         ) {
           this.logger.log(`Robot ${entityIndex}: skipping (PANICKING)`);
           continue;
@@ -1569,12 +1571,12 @@ export class RobotSystem extends createSystem({}) {
 
     // Reset to content emotions and resume wandering
     for (const [entityIndex] of this.robotAgentIds.entries()) {
-      // Skip panicking robots (except robots 4 and 5 can navigate)
+      // Skip panicking robots (4th and 5th panic can navigate, so don't skip those)
       const currentState = this.stateMachine.getState(entityIndex);
+      const pimState = this.pim?.getState(entityIndex);
       if (
         currentState === ROBOT_STATE.PANICKING &&
-        entityIndex !== 4 &&
-        entityIndex !== 5
+        (!pimState || pimState.panicNumber < 4)
       ) {
         continue;
       }
@@ -1908,9 +1910,6 @@ export class RobotSystem extends createSystem({}) {
       return;
     }
 
-    // Track panic count for triggering different dialogs
-    let panicCount = 0;
-
     // Wire up UI callbacks if wristUI provided
     if (wristUI) {
       pim.onScoreUpdate = (current, total) => {
@@ -1923,11 +1922,11 @@ export class RobotSystem extends createSystem({}) {
         this.logger.log("Panic minigame complete!");
         gameState.setState({ panicMinigameCompleted: true });
       };
-      // Set callback for when panic starts
+      // Set callback for when panic starts (panic count is tracked in pim.minigamePanicCount)
       pim.onPanicStart = () => {
         wristUI.scoreUI?.setPanicking(() => pim.isAnyRobotPanicking());
-        panicCount++;
 
+        const panicCount = pim.minigamePanicCount;
         const dialogManager = this.world?.aiManager?.dialogManager;
         if (dialogManager) {
           if (panicCount === 1) {
@@ -2889,11 +2888,12 @@ export class RobotSystem extends createSystem({}) {
         continue;
       }
 
-      // For panicking robots 4 and 5, always ensure they have a navigation target
+      // For 4th and 5th panic robots, always ensure they have a navigation target
       const currentState = this.stateMachine.getState(entityIndex);
+      const pimState = this.pim?.getState(entityIndex);
       if (
         currentState === ROBOT_STATE.PANICKING &&
-        (entityIndex === 4 || entityIndex === 5)
+        pimState?.panicNumber >= 4
       ) {
         // Set a new target periodically, regardless of isAtTarget status
         const timeSinceTarget = time - lastTargetTime;

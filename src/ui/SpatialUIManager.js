@@ -77,6 +77,9 @@ export class SpatialUIManager {
     // Voice panel active (outside state machine)
     this._voicePanelActive = false;
 
+    // Dialog call panel active (for showCallPanel dialogs during minigame)
+    this._dialogCallPanelActive = false;
+
     // Throttle for render settings enforcement (UIKit creates meshes dynamically)
     this._renderSettingsCounter = 0;
     this._renderSettingsInterval = 10; // Every N frames
@@ -314,15 +317,40 @@ export class SpatialUIManager {
     this.callUI.updatePhonemeFrame(frameIndex, uv);
   }
 
-  fadeInCallPanel() {
+  async fadeInCallPanel() {
+    // Ensure call panel exists and is on HUD mount (top-right)
+    await this.registry.createPanel("call");
+    this.registry.reparentPanel("call", ATTACHMENT_MODE.HUD);
+    this.mountManager.setMountVisibility(ATTACHMENT_MODE.HUD, true);
+
+    // Track that dialog panel is showing (for mount updates)
+    this._dialogCallPanelActive = true;
+
     this.registry.setPanelVisible("call", true);
     this.registry.fadeInPanel("call", 0.3);
     this.callUI.setState(CALL_STATE.ACTIVE);
-    this.logger.log("Call panel fading in for dialog");
+    this.logger.log("Call panel fading in for dialog (HUD mount)");
   }
 
   fadeOutCallPanel() {
     this.registry.fadePanel("call", 0, 0.3);
+    this._dialogCallPanelActive = false;
+
+    // After fade completes, hide the panel completely
+    setTimeout(() => {
+      if (!this._dialogCallPanelActive) {
+        this.registry.setPanelVisible("call", false);
+        // Only hide HUD mount if no other panels need it
+        const visiblePanels = this._getPanelsForState(this.currentState);
+        const needsHUD = visiblePanels.some(
+          (p) => this._getMountModeForPanel(p) === ATTACHMENT_MODE.HUD
+        );
+        if (!needsHUD) {
+          this.mountManager.setMountVisibility(ATTACHMENT_MODE.HUD, false);
+        }
+      }
+    }, 350); // Slightly longer than fade duration
+
     this.logger.log("Call panel fading out after dialog");
   }
 
@@ -466,6 +494,11 @@ export class SpatialUIManager {
     // Add wrist mount if voice panel is active
     if (this._voicePanelActive || this.registry.isFading("voice")) {
       activeMounts.add(ATTACHMENT_MODE.WRIST);
+    }
+
+    // Add HUD mount if dialog call panel is active or fading
+    if (this._dialogCallPanelActive || this.registry.isFading("call")) {
+      activeMounts.add(ATTACHMENT_MODE.HUD);
     }
 
     const result = this.mountManager.updateMounts(

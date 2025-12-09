@@ -43,8 +43,9 @@ export class CallPanelUI {
       position: { x: 0, y: -0.015, z: -0.01 },
     });
     this.worldViseme = new VisemeRenderer({
-      size: 0.8,
-      position: { x: 0, y: -0.05, z: -0.01 },
+      size: 0.75,
+      position: { x: 0, y: -0.065, z: -0.01 },
+      renderOrder: 8910, // Below HUD/wrist panels (9000) but above world panel (8900)
     });
 
     this.callStartTime = 0;
