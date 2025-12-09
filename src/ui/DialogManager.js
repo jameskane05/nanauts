@@ -478,10 +478,32 @@ export class DialogManager {
     // Get current time from audio or elapsed time
     let currentTimeMs;
     if (this.lipSyncManager?.audioElement) {
-      currentTimeMs = this.lipSyncManager.audioElement.currentTime * 1000;
+      const audio = this.lipSyncManager.audioElement;
+      currentTimeMs = audio.currentTime * 1000;
 
-      // Check if audio ended
-      if (this.lipSyncManager.audioElement.ended) {
+      // Debug: log progress for gameOutro specifically
+      if (this.currentDialog?.id === "gameOutro" && !this._outroLoggedOnce) {
+        const duration = audio.duration || 0;
+        const currentSec = audio.currentTime.toFixed(1);
+        const durationSec = duration.toFixed(1);
+        if (audio.currentTime > 1) {
+          this.logger.log(
+            `gameOutro progress: ${currentSec}s / ${durationSec}s, ended=${audio.ended}, paused=${audio.paused}`
+          );
+          this._outroLoggedOnce = true;
+        }
+      }
+
+      // Check if audio ended (or reached duration - fallback for emulator)
+      const reachedEnd =
+        audio.ended ||
+        (audio.duration > 0 && audio.currentTime >= audio.duration - 0.05);
+      if (reachedEnd) {
+        this.logger.log(
+          `Audio ended for dialog: ${this.currentDialog?.id} (ended=${
+            audio.ended
+          }, time=${audio.currentTime.toFixed(1)}/${audio.duration.toFixed(1)})`
+        );
         this._handleDialogComplete();
         return;
       }
@@ -607,9 +629,11 @@ export class DialogManager {
 
     this.logger.log(`Dialog complete: ${completedDialog?.id}`);
 
-    // Stop playback
+    // Stop playback and clear current dialog BEFORE callbacks
+    // (callbacks may synchronously start a new dialog)
     this.isPlaying = false;
     this._playbackActive = false;
+    this.currentDialog = null;
 
     // Hide captions
     this._clearCanvas();
@@ -620,7 +644,7 @@ export class DialogManager {
       this.lipSyncManager.stop();
     }
 
-    // Call dialog's onComplete
+    // Call dialog's onComplete (may start a new dialog)
     if (completedDialog?.onComplete) {
       completedDialog.onComplete(gameState);
     }
@@ -629,8 +653,6 @@ export class DialogManager {
     if (this.onDialogComplete) {
       this.onDialogComplete(completedDialog);
     }
-
-    this.currentDialog = null;
 
     // Handle playNext chaining
     if (completedDialog?.playNext) {

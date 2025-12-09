@@ -1,13 +1,22 @@
-import { audioContext, createPanner, getMasterVolume, isAudioPaused } from "./audioContext.js";
+import {
+  audioContext,
+  createPanner,
+  getMasterVolume,
+  isAudioPaused,
+} from "./audioContext.js";
 
 export class RobotEngine {
-  constructor() {
+  constructor(pitchOffset = 0) {
+    // Convert semitones to frequency multiplier
+    this.pitchMultiplier = Math.pow(2, pitchOffset / 12);
+    this.baseFreq = 180 * this.pitchMultiplier;
+
     this.oscillator = audioContext.createOscillator();
-    this.oscillator.type = 'sine';
-    this.oscillator.frequency.setValueAtTime(180, 0);
+    this.oscillator.type = "sine";
+    this.oscillator.frequency.setValueAtTime(this.baseFreq, 0);
 
     this.lfo = audioContext.createOscillator();
-    this.lfo.type = 'sine';
+    this.lfo.type = "sine";
     this.lfo.frequency.setValueAtTime(8, 0);
 
     this.modGain = audioContext.createGain();
@@ -46,9 +55,14 @@ export class RobotEngine {
 
   setVolume(percent) {
     if (!this.isRunning) return;
-    this._targetVolume = Math.max(0, Math.min(1, percent)) * 0.12 * getMasterVolume();
+    this._targetVolume =
+      Math.max(0, Math.min(1, percent)) * 0.12 * getMasterVolume();
     if (!this._isPaused && !isAudioPaused()) {
-      this.masterGain.gain.setTargetAtTime(this._targetVolume, audioContext.currentTime, 0.1);
+      this.masterGain.gain.setTargetAtTime(
+        this._targetVolume,
+        audioContext.currentTime,
+        0.1
+      );
     }
   }
 
@@ -61,29 +75,37 @@ export class RobotEngine {
   resume() {
     if (!this.isRunning || !this._isPaused) return;
     this._isPaused = false;
-    this.masterGain.gain.setTargetAtTime(this._targetVolume, audioContext.currentTime, 0.1);
+    this.masterGain.gain.setTargetAtTime(
+      this._targetVolume,
+      audioContext.currentTime,
+      0.1
+    );
   }
 
   setPitch(percent) {
     if (!this.isRunning) return;
     const p = Math.max(0, Math.min(1, percent));
-    const freq = 180 + p * 100;
+    const freq = this.baseFreq + p * (100 * this.pitchMultiplier);
     const lfoFreq = 8 + p * 7;
     const modDepth = 4 + p * 4;
 
-    this.oscillator.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.1);
+    this.oscillator.frequency.setTargetAtTime(
+      freq,
+      audioContext.currentTime,
+      0.1
+    );
     this.lfo.frequency.setTargetAtTime(lfoFreq, audioContext.currentTime, 0.1);
     this.modGain.gain.setTargetAtTime(modDepth, audioContext.currentTime, 0.1);
   }
 
   setSpeedAndAcceleration(speed, maxSpeed, isJumping = false) {
     const speedPercent = Math.abs(speed) / maxSpeed;
-    
+
     if (speedPercent < 0.1 && !isJumping) {
       this.setVolume(0);
       return;
     }
-    
+
     if (isJumping) {
       this.setPitch(Math.min(1, speedPercent + 0.3));
       this.setVolume(0.4);
@@ -105,4 +127,3 @@ export class RobotEngine {
     }, 100);
   }
 }
-

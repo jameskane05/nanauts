@@ -15,7 +15,7 @@ export class VFXManager {
     this.world = world;
     this.scene = world.scene;
     this.renderer = world.renderer;
-    this.logger = new Logger("VFXManager", false);
+    this.logger = new Logger("VFXManager", true);
 
     // Active VFX instances
     this.activeEffects = new Map();

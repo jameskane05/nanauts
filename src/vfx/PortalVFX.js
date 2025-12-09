@@ -34,7 +34,7 @@ import { Logger } from "../utils/Logger.js";
 
 export class PortalVFX {
   constructor(options = {}) {
-    this.logger = new Logger("PortalVFX", false);
+    this.logger = new Logger("PortalVFX", true);
 
     // Configuration
     this.config = {

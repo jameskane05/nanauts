@@ -134,15 +134,21 @@ export class CallPanelUI {
       );
     }
 
+    // Set crossfade targets (must happen even if docs not ready yet)
+    if (state === CALL_STATE.INCOMING) {
+      this._incomingUITarget = 1;
+      this._visemeTarget = 0;
+    } else if (state === CALL_STATE.ACTIVE) {
+      this._incomingUITarget = 0;
+      this._visemeTarget = 1;
+    }
+
+    // Update DOM elements (only if documents are ready)
     for (const doc of docs) {
       const statusText = doc.getElementById("status-text");
       const statusDot = doc.getElementById("status-dot");
 
       if (state === CALL_STATE.INCOMING) {
-        // Show incoming call UI, hide viseme
-        this._incomingUITarget = 1;
-        this._visemeTarget = 0;
-        // Ensure incoming UI is displayable (set flex before fade in)
         const incomingPrompt = doc.getElementById("incoming-prompt");
         const incomingInfo = doc.getElementById("incoming-info");
         if (incomingPrompt) incomingPrompt.setProperties({ display: "flex" });
@@ -150,9 +156,10 @@ export class CallPanelUI {
         if (statusText) statusText.setProperties({ text: "RINGING" });
         if (statusDot) statusDot.setProperties({ backgroundColor: "#f0ad4e" });
       } else if (state === CALL_STATE.ACTIVE) {
-        // Crossfade: fade out incoming UI, fade in viseme
-        this._incomingUITarget = 0;
-        this._visemeTarget = 1;
+        const incomingPrompt = doc.getElementById("incoming-prompt");
+        const incomingInfo = doc.getElementById("incoming-info");
+        if (incomingPrompt) incomingPrompt.setProperties({ display: "none" });
+        if (incomingInfo) incomingInfo.setProperties({ display: "none" });
         if (statusText) statusText.setProperties({ text: "CONNECTED" });
         if (statusDot) statusDot.setProperties({ backgroundColor: "#00d4e6" });
       }
@@ -359,6 +366,16 @@ export class CallPanelUI {
 
     // Update hologram shader time (runs during active call)
     if (this.currentState === CALL_STATE.ACTIVE) {
+      // Ensure viseme is created (might not have been ready when setState was called)
+      if (!this.viseme.mesh) {
+        this._createViseme();
+      }
+      // Once mesh exists, ensure it's visible
+      if (this.viseme.mesh && !this.viseme.mesh.visible) {
+        this.viseme.show();
+        this.logger.log(`Viseme shown (deferred), alpha=${this._visemeOpacity}`);
+      }
+
       this._hologramTime += deltaTime;
       if (this.viseme.uniforms) {
         this.viseme.uniforms.uTime.value = this._hologramTime;

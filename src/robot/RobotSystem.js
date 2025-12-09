@@ -1176,12 +1176,9 @@ export class RobotSystem extends createSystem({}) {
         this._triggerModemApproach();
       }
 
-      // When robots should exit (game ending)
-      if (
-        newState.robotBehavior === "exiting" &&
-        oldState.robotBehavior !== "exiting"
-      ) {
-        this.logger.log("Game ending - robots exiting through portal");
+      // When game ending starts (dialog playing) - spawn portal and start robots moving
+      if (newState.gameEnding && !oldState.gameEnding) {
+        this.logger.log("Game ending started - spawning exit portal");
         this.logger.log(
           `  modemStays=${
             newState.modemStays
@@ -1189,14 +1186,16 @@ export class RobotSystem extends createSystem({}) {
             newState.portalSpawnPosition
           )}`
         );
-        this._triggerRobotExit(newState.modemStays);
+        this._spawnExitPortalAndNavigate(newState.modemStays);
       }
 
-      // Debug: log gameEnding changes
-      if (newState.gameEnding !== oldState.gameEnding) {
-        this.logger.log(
-          `gameEnding changed: ${oldState.gameEnding} -> ${newState.gameEnding}`
-        );
+      // When dialog ends and robots should jump into portal
+      if (
+        newState.robotBehavior === "exiting" &&
+        oldState.robotBehavior !== "exiting"
+      ) {
+        this.logger.log("Dialog ended - triggering robot exit animations");
+        this._triggerRobotExitAnimations();
       }
     });
   }
@@ -1361,41 +1360,31 @@ export class RobotSystem extends createSystem({}) {
   }
 
   /**
-   * Trigger robot exit sequence - robots navigate to spawn portal and exit
-   * @param {boolean} modemStays - If true, Modem stays while Blit and Baud exit
+   * Phase 1: Spawn exit portal and start robots navigating toward it
+   * Called when gameEnding: true (dialog starts playing)
    */
-  _triggerRobotExit(modemStays) {
-    this.logger.log(`_triggerRobotExit called with modemStays=${modemStays}`);
+  _spawnExitPortalAndNavigate(modemStays) {
+    this.logger.log(
+      `_spawnExitPortalAndNavigate called, modemStays=${modemStays}`
+    );
     const state = gameState.getState();
     let portalPos = state.portalSpawnPosition;
 
-    // Fallback: if no portal position (debug spawn), use first robot's position
+    // Fallback: if no portal position (debug spawn), use center position
     if (!portalPos) {
-      this.logger.warn(
-        "No portal spawn position - using first robot position as fallback"
-      );
-      for (const [entityIndex] of this.robotAgentIds.entries()) {
-        const robotEntity = this.robotEntities.get(entityIndex);
-        if (robotEntity?.object3D) {
-          const pos = robotEntity.object3D.position;
-          portalPos = { x: pos.x, y: pos.y, z: pos.z };
-          this.logger.log(
-            `Using robot ${entityIndex} position: ${JSON.stringify(portalPos)}`
-          );
-          break;
-        }
-      }
+      this.logger.warn("No portal spawn position - using fallback (0, 0, -1)");
+      portalPos = { x: 0, y: 0, z: -1 };
     }
 
-    if (!portalPos) {
-      this.logger.warn(
-        "No portal spawn position and no robots found - cannot proceed!"
-      );
-      return;
-    }
-    this.logger.log(`Exit portal position: ${JSON.stringify(portalPos)}`);
-
+    // Portal visual position (at floor level)
     const exitPosition = new Vector3(portalPos.x, portalPos.y, portalPos.z);
+
+    // Navigation goal needs to be at navmesh height (typically 0.1m above floor)
+    const navGoalPosition = new Vector3(portalPos.x, 0.1, portalPos.z);
+
+    this.logger.log(
+      `Exit portal at Y=${portalPos.y.toFixed(2)}, nav goal at Y=0.10`
+    );
 
     // Determine which robots should exit
     const robotsToExit = [];
@@ -1407,87 +1396,91 @@ export class RobotSystem extends createSystem({}) {
     if (baudResult) robotsToExit.push(baudResult.entityIndex);
     if (!modemStays && modemResult) robotsToExit.push(modemResult.entityIndex);
 
-    this.logger.log(
-      `Exit sequence: ${robotsToExit.length} robots exiting, modemStays=${modemStays}`
-    );
-
-    // Make exiting robots happy and navigate to portal
-    for (const entityIndex of robotsToExit) {
-      this.setRobotFaceEmotion(entityIndex, "excited");
-      const voice = this.audioManager?.getVoice(entityIndex);
-      if (voice) {
-        setTimeout(() => voice.happy?.(), Math.random() * 500);
-      }
-    }
+    this.logger.log(`Exit sequence: ${robotsToExit.length} robots will exit`);
 
     // Store exit state
     this._exitingRobots = new Set(robotsToExit);
     this._exitPosition = exitPosition;
     this._modemStays = modemStays;
+    this._robotsToExit = robotsToExit;
 
-    // Set goal to portal position for exiting robots
-    this.navigationManager.setGoal(exitPosition);
+    // Disable interactions and wandering for exiting robots
+    for (const entityIndex of robotsToExit) {
+      this.interactionManager?.setExcluded(entityIndex, true);
+      this.setRobotFaceEmotion(entityIndex, "excited");
+    }
 
-    // Check periodically if exiting robots have reached the portal
-    const checkExitArrival = setInterval(() => {
-      let allArrived = true;
-      for (const entityIndex of robotsToExit) {
-        const agentId = this.robotAgentIds?.get(entityIndex);
-        if (agentId === undefined) continue;
-        const agent = this.agents?.agents?.[agentId];
-        if (!agent || agent.state !== 0) {
-          // STATE_IDLE = 0 = at target
-          allArrived = false;
-          break;
-        }
-      }
+    // Spawn the exit portal immediately (at floor level)
+    this._createExitPortal(exitPosition, robotsToExit);
 
-      if (allArrived) {
-        clearInterval(checkExitArrival);
-        this.logger.log("Exiting robots reached portal position");
-        this._createExitPortal(exitPosition, robotsToExit);
-      }
-    }, 500);
+    // Set navigation goal at navmesh height (so robots can actually reach it)
+    this.navigationManager.setGoalFromPosition(navGoalPosition);
 
-    // Safety timeout
-    setTimeout(() => clearInterval(checkExitArrival), 30000);
-
-    // If Modem stays, make them happy and continue wandering
+    // If Modem stays, make them happy
     if (modemStays && modemResult) {
       const modemIndex = modemResult.entityIndex;
       this.setRobotFaceEmotion(modemIndex, "excited");
       const voice = this.audioManager?.getVoice(modemIndex);
       if (voice) voice.happy?.();
-
-      // Modem does a happy bounce and continues wandering
       this.interactionManager?.triggerSoloAnimation(modemIndex, "happyBounce");
-
-      // After a moment, resume wandering
-      setTimeout(() => {
-        this.setRobotFaceEmotion(modemIndex, "content");
-        const robotEntity = this.robotEntities?.get(modemIndex);
-        const agentId = this.robotAgentIds?.get(modemIndex);
-        if (robotEntity && agentId !== undefined) {
-          this.navigationManager?.selectRandomWanderTarget(
-            robotEntity,
-            agentId
-          );
-        }
-      }, 2000);
     }
   }
 
   /**
-   * Create exit portal and animate robots jumping through
+   * Phase 2: Trigger robot exit animations (jumping into portal)
+   * Called when robotBehavior: "exiting" (dialog finished)
+   */
+  _triggerRobotExitAnimations() {
+    if (!this._exitPortal || !this._robotsToExit) {
+      this.logger.warn(
+        "_triggerRobotExitAnimations called but no exit portal/robots"
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Triggering exit animations for ${this._robotsToExit.length} robots`
+    );
+
+    // Stop all exiting robots at their current position
+    for (const entityIndex of this._robotsToExit) {
+      this.navigationManager?.stopRobotMovement(entityIndex);
+    }
+
+    // Start exit animation phase in portal update loop
+    this._exitPortal.phase = "exiting";
+    this._exitPortal.exitStartTime = performance.now();
+
+    // If Modem stays, let them resume wandering after a moment
+    if (this._modemStays) {
+      const modemResult = this.characterManager?.getByName("Modem");
+      if (modemResult) {
+        const modemIndex = modemResult.entityIndex;
+        setTimeout(() => {
+          this.setRobotFaceEmotion(modemIndex, "content");
+          const robotEntity = this.robotEntities?.get(modemIndex);
+          const agentId = this.robotAgentIds?.get(modemIndex);
+          if (robotEntity && agentId !== undefined) {
+            this.navigationManager?.selectRandomWanderTarget(
+              robotEntity,
+              agentId
+            );
+          }
+        }, 3000);
+      }
+    }
+  }
+
+  /**
+   * Create exit portal VFX - portal stays open until all robots exit
    */
   _createExitPortal(position, robotsToExit) {
     this.logger.log(
-      `_createExitPortal called at ${JSON.stringify(position)} for ${
-        robotsToExit.length
-      } robots`
+      `_createExitPortal at (${position.x.toFixed(2)}, ${position.y.toFixed(
+        2
+      )}, ${position.z.toFixed(2)}) for ${robotsToExit.length} robots`
     );
 
-    // Create exit portal VFX
     const portalHandle = this.world.vfxManager?.createPortal({
       position: position,
       config: {
@@ -1498,46 +1491,239 @@ export class RobotSystem extends createSystem({}) {
       },
     });
 
+    this.logger.log(`Portal handle: ${portalHandle ? "created" : "FAILED"}`);
+
     // Create portal audio
     const portalAudio = new PortalAudio();
     portalAudio.setPosition(position.x, position.y, position.z);
     portalAudio.startEntrance();
 
-    // Animate robots descending into portal one by one
-    let exitDelay = 1000; // Start after portal opens
-    for (const entityIndex of robotsToExit) {
-      setTimeout(() => {
-        this._animateRobotExit(entityIndex, position);
-      }, exitDelay);
-      exitDelay += 800; // Stagger exits
+    // Store exit portal - starts in "opening" phase, waits for dialog to finish
+    this._exitPortal = {
+      handle: portalHandle,
+      audio: portalAudio,
+      position: position.clone(),
+      phase: "opening",
+      startTime: performance.now(),
+      robotsToExit: robotsToExit,
+      robotExitIndex: 0,
+      robotsExited: 0,
+    };
+
+    this.logger.log(`Exit portal created, will animate in update loop`);
+  }
+
+  /**
+   * Update exit portal animation - called from update()
+   * Phases: opening -> waiting -> exiting -> closing
+   */
+  _updateExitPortal(deltaTime) {
+    if (!this._exitPortal) return;
+
+    const portal = this._exitPortal;
+    const elapsed = (performance.now() - portal.startTime) / 1000;
+    const openDuration = 1.0;
+    const closeDuration = 0.8;
+
+    // Update VFX shader time
+    if (portal.handle) {
+      portal.handle.update(deltaTime);
     }
 
-    // Close portal after all robots exit
-    setTimeout(() => {
-      if (portalHandle) {
-        portalHandle.dispose();
-      }
-      portalAudio?.stop();
+    if (portal.phase === "opening") {
+      const progress = Math.min(1, elapsed / openDuration);
+      const eased = this._easeOutBack(progress);
 
-      // Clear exit state
-      this._exitingRobots = null;
-      this._exitPosition = null;
-
-      // If all robots exited, game is complete
-      if (!this._modemStays) {
-        gameState.setState({ robotsActive: false });
+      if (portal.handle) {
+        portal.handle.setProgress(eased);
       }
-    }, exitDelay + 2000);
+      if (portal.audio) {
+        portal.audio.updateEntrance(progress, eased);
+      }
+
+      // Once open, transition to waiting (portal stays open for dialog)
+      if (progress >= 1) {
+        portal.phase = "waiting";
+        this.logger.log(
+          "Exit portal fully open - waiting for dialog to finish"
+        );
+      }
+    } else if (portal.phase === "waiting" || portal.phase === "exiting") {
+      // Portal stays open - check if robots are close enough to exit
+      if (portal.handle) {
+        portal.handle.setProgress(1);
+      }
+
+      // Initialize exit tracking
+      if (!portal.robotsExitedSet) {
+        portal.robotsExitedSet = new Set();
+      }
+      if (!portal.robotsExitingSet) {
+        portal.robotsExitingSet = new Set();
+      }
+
+      // Check each robot that should exit - trigger exit when close enough
+      const exitThreshold = 2.5; // Distance to trigger exit
+      for (const entityIndex of portal.robotsToExit) {
+        // Skip if already exiting or exited
+        if (portal.robotsExitingSet.has(entityIndex)) continue;
+        if (portal.robotsExitedSet.has(entityIndex)) continue;
+
+        // Get robot position
+        const state = this.robotState?.get(entityIndex);
+        const robotGroup = state?.group;
+        if (!robotGroup) continue;
+
+        // Check distance to portal
+        const dx = robotGroup.position.x - portal.position.x;
+        const dz = robotGroup.position.z - portal.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist < exitThreshold) {
+          portal.robotsExitingSet.add(entityIndex);
+          this._animateRobotExit(entityIndex, portal.position, portal);
+          this.logger.log(
+            `Robot ${entityIndex} close enough (${dist.toFixed(
+              1
+            )}m) - starting exit animation`
+          );
+        }
+      }
+
+      // Close portal when ALL robots have actually exited
+      const allRobotsActuallyExited =
+        portal.robotsExitedSet.size >= portal.robotsToExit.length;
+      if (allRobotsActuallyExited) {
+        portal.phase = "closing";
+        portal.closeStartTime = performance.now();
+        this.logger.log("All robots exited - closing portal");
+      }
+    } else if (portal.phase === "_UNUSED_exiting") {
+      // Animate robots exiting one by one
+      const exitElapsed = (performance.now() - portal.exitStartTime) / 1000;
+      const exitInterval = 1.5; // 1.5 seconds between each robot exit
+
+      // Initialize exit tracking
+      if (!portal.robotsExitedSet) {
+        portal.robotsExitedSet = new Set();
+      }
+
+      // Start first robot immediately
+      if (portal.robotExitIndex === 0 && portal.robotsToExit.length > 0) {
+        const entityIndex = portal.robotsToExit[0];
+        this._animateRobotExit(entityIndex, portal.position, portal);
+        portal.robotExitIndex = 1;
+        this.logger.log(
+          `Robot ${entityIndex} starting exit animation (1/${portal.robotsToExit.length})`
+        );
+      }
+
+      // Trigger subsequent robots based on elapsed time
+      const nextRobotIndex = Math.floor(exitElapsed / exitInterval);
+      if (
+        nextRobotIndex >= portal.robotExitIndex &&
+        portal.robotExitIndex < portal.robotsToExit.length
+      ) {
+        const entityIndex = portal.robotsToExit[portal.robotExitIndex];
+        this._animateRobotExit(entityIndex, portal.position, portal);
+        portal.robotExitIndex++;
+        this.logger.log(
+          `Robot ${entityIndex} starting exit animation (${portal.robotExitIndex}/${portal.robotsToExit.length})`
+        );
+      }
+
+      // Only close portal when ALL robots have actually exited
+      const allRobotsActuallyExited =
+        portal.robotsExitedSet.size >= portal.robotsToExit.length;
+      if (allRobotsActuallyExited) {
+        portal.phase = "closing";
+        portal.closeStartTime = performance.now();
+        this.logger.log("All robots exited - closing portal");
+      }
+    } else if (portal.phase === "closing") {
+      const closeElapsed = (performance.now() - portal.closeStartTime) / 1000;
+      const progress = Math.min(1, closeElapsed / closeDuration);
+
+      if (portal.handle) {
+        portal.handle.setProgress(1 - this._easeInCubic(progress));
+      }
+
+      if (progress >= 1) {
+        if (portal.handle) {
+          portal.handle.dispose();
+        }
+        portal.audio?.stop();
+
+        // Clear exit state
+        this._exitPortal = null;
+        this._exitingRobots = null;
+        this._exitPosition = null;
+        this._robotsToExit = null;
+
+        // If all robots exited, game is complete
+        if (!this._modemStays) {
+          gameState.setState({ robotsActive: false });
+        }
+
+        this.logger.log("Exit portal closed and disposed");
+      }
+    }
+  }
+
+  _easeOutBack(t) {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  _easeInCubic(t) {
+    return t * t * t;
   }
 
   /**
    * Animate a single robot descending into the exit portal
    */
-  _animateRobotExit(entityIndex, portalPosition) {
-    const robotState = this.robotStates?.get(entityIndex);
+  _animateRobotExit(entityIndex, portalPosition, portal) {
+    // Use robotState (singular) - the consolidated state map
+    const state = this.robotState?.get(entityIndex);
     const robotEntity = this.robotEntities?.get(entityIndex);
 
-    if (!robotState || !robotEntity) return;
+    // Get the robot's visual group from state or entity
+    let robotGroup = state?.group;
+    if (!robotGroup && robotEntity?.object3D) {
+      robotGroup = robotEntity.object3D;
+    }
+
+    this.logger.log(
+      `_animateRobotExit: entity=${entityIndex}, hasState=${!!state}, hasGroup=${!!robotGroup}`
+    );
+
+    if (!robotGroup) {
+      this.logger.warn(`_animateRobotExit: No robot group for ${entityIndex}`);
+      if (portal?.robotsExitedSet) {
+        portal.robotsExitedSet.add(entityIndex);
+      }
+      return;
+    }
+
+    // CRITICAL: Completely stop this robot's navigation
+    const agentId = this.robotAgentIds?.get(entityIndex);
+    if (agentId !== undefined && this.agents?.agents?.[agentId]) {
+      const agent = this.agents.agents[agentId];
+      // Zero out all movement
+      agent.velocity = [0, 0, 0];
+      agent.desiredVelocity = [0, 0, 0];
+      agent.targetState = 0;
+      agent.state = 0;
+      // Mark as removed so update loop ignores it
+      this.robotAgentIds.delete(entityIndex);
+    }
+    this.navigationManager?.stopRobotMovement(entityIndex);
+    this.interactionManager?.setExcluded(entityIndex, true);
+
+    // Mark this robot as exiting so it won't get new navigation commands
+    if (!this._exitingRobots) this._exitingRobots = new Set();
+    this._exitingRobots.add(entityIndex);
 
     // Play excited sound
     const voice = this.audioManager?.getVoice(entityIndex);
@@ -1547,43 +1733,49 @@ export class RobotSystem extends createSystem({}) {
     this.interactionManager?.triggerSoloAnimation(entityIndex, "happyBounce");
 
     // Animate robot descending into portal
-    const startY = robotState.group?.position?.y || 0.5;
+    const startY = robotGroup.position?.y ?? 0.5;
     const startTime = performance.now();
-    const duration = 1000;
+    const duration = 1500;
+
+    this.logger.log(
+      `Robot ${entityIndex} descending from Y=${startY.toFixed(2)}`
+    );
 
     const animateDescend = () => {
       const elapsed = performance.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      if (robotState.group) {
+      if (robotGroup) {
         // Ease-in descent
         const easeProgress = progress * progress;
-        robotState.group.position.y =
+        robotGroup.position.y =
           startY * (1 - easeProgress) - 0.5 * easeProgress;
 
         // Scale down as robot descends
-        const scale = 1 - easeProgress * 0.8;
-        robotState.group.scale.setScalar(scale);
+        const scale = Math.max(0.1, 1 - easeProgress * 0.8);
+        robotGroup.scale.setScalar(scale);
       }
 
       if (progress < 1) {
         requestAnimationFrame(animateDescend);
       } else {
-        // Robot fully exited - hide and clean up
-        if (robotState.group) {
-          robotState.group.visible = false;
+        // Robot fully exited - hide everything
+        if (robotGroup) {
+          robotGroup.visible = false;
         }
 
-        // Remove from navigation
-        const agentId = this.robotAgentIds?.get(entityIndex);
-        if (agentId !== undefined && this.agents) {
-          this.agents.removeAgent(agentId);
+        // Hide nametag if it exists on state
+        if (state?.nameTag) {
+          state.nameTag.visible = false;
         }
 
-        // Hide nametag
-        this.characterManager?.hideNameTag(entityIndex);
-
-        this.logger.log(`Robot ${entityIndex} exited through portal`);
+        // Mark robot as exited
+        if (portal?.robotsExitedSet) {
+          portal.robotsExitedSet.add(entityIndex);
+          this.logger.log(
+            `Robot ${entityIndex} EXITED (${portal.robotsExitedSet.size}/${portal.robotsToExit.length})`
+          );
+        }
       }
     };
 
@@ -2390,6 +2582,9 @@ export class RobotSystem extends createSystem({}) {
     // Update room setup (handles room capture UI, NavMesh init)
     this.roomSetupManager.update();
 
+    // Update exit portal animation (runs even without navmesh)
+    this._updateExitPortal(clampedDeltaTime);
+
     if (!this.navMeshInitialized || !this.agents || !this.navMesh) {
       return;
     }
@@ -3020,7 +3215,10 @@ export class RobotSystem extends createSystem({}) {
       if (this.audioManager.audioEnabled) {
         let engine = this.audioManager.getEngine(entityIndex);
         if (!engine) {
-          engine = this.audioManager.createEngineForRobot(entityIndex);
+          engine = this.audioManager.createEngineForRobot(
+            entityIndex,
+            state?.character
+          );
         }
         const isJumping = squashState.isJumping;
         engine.setSpeedAndAcceleration(speed, characterMaxSpeed, isJumping);
@@ -3283,6 +3481,21 @@ export class RobotSystem extends createSystem({}) {
           const smState = this.stateMachine.getState(entityIndex);
           this.logger.log(
             `Robot ${entityIndex}: SKIPPING movement - movementAllowed=${movementAllowed}, pauseMovement=${pauseMovement}, smState=${smState}`
+          );
+        }
+        continue;
+      }
+
+      // Skip wandering logic for robots that are exiting - they should navigate to portal
+      if (this._exitingRobots?.has(entityIndex)) {
+        // Exiting robots navigate to goal, skip wandering
+        const nav = this.navigationManager;
+        if (nav.goalNodeRef && nav.goalPosition) {
+          crowd.requestMoveTarget(
+            this.agents,
+            agentId,
+            nav.goalNodeRef,
+            nav.goalPosition
           );
         }
         continue;

@@ -277,6 +277,7 @@ export class ApiClient {
               greetingResult: gameState.greetingResult,
               introPlayed: gameState.introPlayed,
               callAnswered: gameState.callAnswered,
+              interpretMode: gameState.interpretMode,
             }
           : null;
 
@@ -314,7 +315,7 @@ Analyze the user's speech and classify:
 - command: User is giving an instruction or command
 - question: User is asking a question
 - acknowledgment: User is acknowledging something (yes, okay, sure, etc.)
-- reassuring: User is providing reassurance, comfort, or encouragement (e.g., "it's okay", "don't worry", "you're doing great", "that's fine")
+- reassuring: User is providing reassurance, comfort, encouragement, praise, or compliments. Examples include: "it's okay", "don't worry", "you're doing great", "you're the best", "I believe in you", "you're amazing", "everything will be fine", "I'm proud of you", "you're so great", "that's wonderful", "good job", "well done"
 - negative: User is declining or saying no
 - other: Anything else
 
@@ -333,7 +334,7 @@ If corrections were made, include the corrected text in "corrected_transcription
 
 4. GAME STATE EVALUATION - Based on the current game state, evaluate these specific intents:
 - is_greeting: true if this is a friendly greeting (hello, hi, hey, etc.)
-- is_reassuring: true if this is a reassuring statement (it's okay, don't worry, you're fine, etc.)
+- is_reassuring: true if this speech is reassuring, comforting, encouraging, praising, or complimenting. This includes expressions of support, affirmation, admiration, or positivity directed at someone. Be generous - if the user is saying something kind or supportive, mark it as reassuring.
 - is_goodbye: true if this is a farewell (goodbye, bye, see you, etc.)
 
 Response format (JSON only):

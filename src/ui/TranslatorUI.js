@@ -87,6 +87,28 @@ export class TranslatorUI {
     return this.registry.getDocument("voice");
   }
 
+  _clearPreviousResult() {
+    const doc = this.getDocument();
+    if (!doc) return;
+
+    const transcriptionText = doc.getElementById("transcription-text");
+    const resultText = doc.getElementById("result-text");
+    const resultRow = doc.getElementById("result-row");
+
+    if (transcriptionText) {
+      transcriptionText.setProperties({ text: "", color: "#ffffff" });
+    }
+    if (resultText) {
+      resultText.setProperties({ text: "", color: "#9ca3af" });
+    }
+    if (resultRow) {
+      resultRow.setProperties({
+        backgroundColor: "rgba(0, 70, 90, 0.5)",
+        borderColor: "rgba(0, 200, 220, 0.3)",
+      });
+    }
+  }
+
   setRecordingState(state) {
     const prevState = this.recordingState;
     this.recordingState = state;
@@ -97,6 +119,7 @@ export class TranslatorUI {
     ) {
       uiAudio.voiceStart();
       hapticManager.pulseBoth(0.7, 60);
+      this._clearPreviousResult();
     } else if (
       state === VOICE_RECORDING_STATE.PROCESSING &&
       prevState === VOICE_RECORDING_STATE.RECORDING
@@ -321,26 +344,14 @@ export class TranslatorUI {
         if (statusText) statusText.setProperties({ text: "NON-REASSURING" });
       }
     } else if (interpretMode === "modem_stay") {
-      // Modem stay mode: check for yes/no/non-answer using transcription patterns
-      // (must match AIManager's pattern matching logic)
-      const transcription = (
-        result.corrected_transcription ||
-        result.transcription ||
-        ""
-      ).toLowerCase();
-      // Expanded patterns to catch more natural responses
-      const yesPatterns =
-        /\b(yes|yeah|yep|yup|sure|okay|ok|of course|absolutely|definitely|please|stay|welcome|friend|can stay|love to|i'd love|would love|happy to|gladly)\b/i;
-      const noPatterns =
-        /\b(no|nope|nah|sorry|leave|go away|goodbye|bye|can't stay|cannot stay|have to go|must go|go home)\b/i;
-      const isYes = yesPatterns.test(transcription);
-      const isNo = noPatterns.test(transcription);
+      // Modem stay mode: LLM classifies as yes/no/non_answer
+      const modemIntent = result.intent; // "yes", "no", or "non_answer"
 
       this.logger.log(
-        `Modem stay UI check - transcription: "${transcription}", isYes: ${isYes}, isNo: ${isNo}`
+        `Modem stay UI - LLM intent: "${modemIntent}", confidence: ${result.confidence}`
       );
 
-      if (isYes) {
+      if (modemIntent === "yes") {
         uiAudio.success();
         hapticManager.pulseBoth(0.8, 80);
         setTimeout(() => hapticManager.pulseBoth(0.6, 60), 100);
@@ -357,7 +368,7 @@ export class TranslatorUI {
           });
         if (statusDot) statusDot.setProperties({ backgroundColor: "#22c55e" });
         if (statusText) statusText.setProperties({ text: "YES" });
-      } else if (isNo) {
+      } else if (modemIntent === "no") {
         uiAudio.notification();
         hapticManager.pulseBoth(0.5, 50);
 

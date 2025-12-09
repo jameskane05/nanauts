@@ -765,44 +765,21 @@ export class AIManager extends createSystem({
         // Trigger Baud reaction based on result
         this._triggerBaudReaction(isReassuring, result);
       } else if (state.interpretMode === "modem_stay") {
-        // Modem stay mode: looking for yes/no answer
-        const transcription = (
-          result.corrected_transcription ||
-          result.transcription ||
-          ""
-        ).toLowerCase();
-
-        this.logger.log(`Modem stay check - transcription: "${transcription}"`);
-
-        // Check for affirmative or negative responses
-        // Expanded patterns to catch more natural responses
-        const yesPatterns =
-          /\b(yes|yeah|yep|yup|sure|okay|ok|of course|absolutely|definitely|please|stay|welcome|friend|can stay|love to|i'd love|would love|happy to|gladly)\b/i;
-        const noPatterns =
-          /\b(no|nope|nah|sorry|leave|go away|goodbye|bye|can't stay|cannot stay|have to go|must go|go home)\b/i;
-
-        let modemStayResult = null;
-        if (yesPatterns.test(transcription)) {
-          modemStayResult = "yes";
-        } else if (noPatterns.test(transcription)) {
-          modemStayResult = "no";
-        }
+        // Modem stay mode: LLM classifies as yes/no/non_answer
+        const modemStayResult = result.intent; // "yes", "no", or "non_answer"
 
         this.logger.log(
-          `Setting modemStayResult: ${modemStayResult || "non_answer"}`
+          `Modem stay LLM result - intent: "${modemStayResult}", confidence: ${result.confidence}`
         );
 
-        if (modemStayResult) {
-          // Clear yes/no answer
-          gameState.setState({ modemStayResult });
+        gameState.setState({ modemStayResult });
 
+        if (modemStayResult === "yes" || modemStayResult === "no") {
           // Trigger Modem's reaction
           const robotSystem = this.world?.robotSystem;
           robotSystem?._handleModemStayResponse(modemStayResult === "yes");
-        } else {
-          // Non-answer - prompt again
-          gameState.setState({ modemStayResult: "non_answer" });
         }
+        // non_answer: game state set, UI will prompt again
       } else {
         // Default greeting mode
         const isPositiveGreeting =

@@ -1,31 +1,31 @@
 /**
  * RobotAudioManager.js - Robot engine sounds and voice chatter
  * =============================================================================
- * 
+ *
  * ROLE: Manages spatial audio for robots including engine hum (continuous) and
  * voice chatter (periodic mood sounds). Handles pause/resume for tab/XR state.
- * 
+ *
  * AUDIO TYPES:
  *   - Engine: Continuous hum from RobotEngine, varies with speed/jumping
  *   - Voice: Character-specific mood sounds (happy, curious, content, etc.)
  *     via RobotVoice. Triggered by interactions or random chatter.
- * 
+ *
  * KEY METHODS:
  *   - createEngineForRobot(entityIndex): Initialize engine audio
  *   - createVoiceForRobot(entityIndex, character): Initialize voice
  *   - getVoice(entityIndex)/getEngine(entityIndex): Access audio instances
  *   - updateEngine(entityIndex, speed, isJumping, jumpProgress): Per-frame
  *   - setAudioEnabled(bool)/setVoiceEnabled(bool): Master toggles
- * 
+ *
  * CHATTER SYSTEM:
  *   - Random interval between chatterIntervalMin/Max (5-20s default)
  *   - Robots occasionally make mood sounds when not interacting
- * 
+ *
  * PAUSE HANDLING:
  *   - Pauses all engines when tab hidden (document visibility)
  *   - Pauses when XR headset removed (GAME_STATES.XR_PAUSED)
  *   - Resumes automatically when state restored
- * 
+ *
  * SPATIAL AUDIO: Uses Web Audio API with HRTF panning. Listener position
  * updated from camera via updateListenerPosition().
  * =============================================================================
@@ -59,10 +59,10 @@ export class RobotAudioManager {
 
     // Reusable vector for listener direction
     this._audioForward = null; // Will be set from robotSystem
-    
+
     // Pause state
     this._isPaused = false;
-    
+
     // Listen for document visibility changes (tab hidden)
     this._unsubVisibility = onVisibilityChange((visible) => {
       if (visible) {
@@ -71,12 +71,18 @@ export class RobotAudioManager {
         this._pauseAllEngines();
       }
     });
-    
+
     // Listen for XR pause state (headset removed)
     gameState.on("state:changed", (newState, oldState) => {
-      if (newState.currentState === GAME_STATES.XR_PAUSED && oldState.currentState !== GAME_STATES.XR_PAUSED) {
+      if (
+        newState.currentState === GAME_STATES.XR_PAUSED &&
+        oldState.currentState !== GAME_STATES.XR_PAUSED
+      ) {
         this._pauseAllEngines();
-      } else if (oldState.currentState === GAME_STATES.XR_PAUSED && newState.currentState !== GAME_STATES.XR_PAUSED) {
+      } else if (
+        oldState.currentState === GAME_STATES.XR_PAUSED &&
+        newState.currentState !== GAME_STATES.XR_PAUSED
+      ) {
         this._resumeAllEngines();
       }
     });
@@ -105,13 +111,14 @@ export class RobotAudioManager {
     return this.robotAudioEngines.get(entityIndex);
   }
 
-  createEngineForRobot(entityIndex) {
+  createEngineForRobot(entityIndex, character) {
     if (this.robotAudioEngines.has(entityIndex)) {
       return this.robotAudioEngines.get(entityIndex);
     }
 
     resumeAudioContext();
-    const engine = new RobotEngine();
+    const pitchOffset = character?.pitchOffset ?? 0;
+    const engine = new RobotEngine(pitchOffset);
     this.robotAudioEngines.set(entityIndex, engine);
     return engine;
   }
@@ -183,7 +190,11 @@ export class RobotAudioManager {
     if (this.audioEnabled) {
       const engine = this.robotAudioEngines.get(entityIndex);
       if (engine) {
-        engine.setPosition(agentPosition[0], agentPosition[1], agentPosition[2]);
+        engine.setPosition(
+          agentPosition[0],
+          agentPosition[1],
+          agentPosition[2]
+        );
         engine.setSpeed(speed);
       }
     }
@@ -252,4 +263,3 @@ export class RobotAudioManager {
     this.stopAll();
   }
 }
-

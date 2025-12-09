@@ -44,8 +44,8 @@ export class RobotNavigationManager {
     this.goalAccessible = false;
     this.robotsAtGoal = null;
     this.goalReachedCallback = null;
-    this.goalReachThreshold = 0.8;
-    this.goalReachThresholdSq = 0.64; // Squared for fast comparison
+    this.goalReachThreshold = 2.0;
+    this.goalReachThresholdSq = 4.0; // Squared for fast comparison
   }
 
   setGoal(goalPosition) {
@@ -67,8 +67,20 @@ export class RobotNavigationManager {
   }
 
   setGoalFromPosition(pos) {
-    if (!pos) return;
+    if (!pos) {
+      this.logger.warn(
+        "setGoalFromPosition called with null/undefined position"
+      );
+      return;
+    }
     const goalArray = Array.isArray(pos) ? pos : [pos.x, pos.y, pos.z];
+    // Validate array values
+    if (goalArray.some((v) => v === undefined || v === null || isNaN(v))) {
+      this.logger.warn(
+        `Invalid goal position values: ${JSON.stringify(goalArray)}`
+      );
+      return;
+    }
     this.setGoal(goalArray);
   }
 
@@ -93,6 +105,7 @@ export class RobotNavigationManager {
 
   evaluateGoalAccessibility() {
     if (!this.rs.navMesh || !this.goalPosition) {
+      this.logger.warn("evaluateGoalAccessibility: No navMesh or goalPosition");
       this.goalAccessible = false;
       return;
     }
@@ -106,11 +119,15 @@ export class RobotNavigationManager {
     );
 
     if (!goalResult.success) {
+      this.logger.warn("evaluateGoalAccessibility: findNearestPoly failed");
       this.goalAccessible = false;
       return;
     }
 
     this.goalNodeRef = goalResult.nodeRef;
+    this.logger.log(
+      `evaluateGoalAccessibility: Found goalNodeRef=${goalResult.nodeRef}`
+    );
 
     let canReach = false;
     for (const [entityIndex, agentId] of this.rs.robotAgentIds.entries()) {
@@ -132,6 +149,7 @@ export class RobotNavigationManager {
     }
 
     this.goalAccessible = canReach;
+    this.logger.log(`evaluateGoalAccessibility: goalAccessible=${canReach}`);
 
     if (this.goalAccessible) {
       this._sendAllRobotsToGoal();
@@ -139,6 +157,7 @@ export class RobotNavigationManager {
   }
 
   _sendAllRobotsToGoal() {
+    let sentCount = 0;
     for (const [entityIndex, agentId] of this.rs.robotAgentIds.entries()) {
       const agent = this.rs.agents.agents[agentId];
       if (!agent) continue;
@@ -158,8 +177,10 @@ export class RobotNavigationManager {
           this.goalNodeRef,
           this.goalPosition
         );
+        sentCount++;
       }
     }
+    this.logger.log(`_sendAllRobotsToGoal: Sent ${sentCount} robots to goal`);
   }
 
   checkRobotAtGoal(entityIndex, agentPosition) {
